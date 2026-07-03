@@ -12,7 +12,8 @@ from app.data.sample_data import (
     blank_capability_matrix,
     blank_viability_gate,
 )
-from app.logic.persistence import append_intake_record
+from app.logic.persistence import FIELDNAMES as INTAKE_LOG_FIELDNAMES
+from app.logic.persistence import append_intake_record, load_intake_log
 from app.logic.readout import generate_readout
 
 CUSTOM_CSS = """
@@ -155,6 +156,17 @@ def build_app():
                 save_intake_btn = gr.Button("Save intake / continue", variant="primary")
                 intake_summary_md = gr.Markdown("")
 
+                with gr.Accordion("Saved intake log (persistence check)", open=False):
+                    refresh_log_btn = gr.Button("Refresh saved log")
+                    intake_log_status_md = gr.Markdown("")
+                    intake_log_df = gr.Dataframe(
+                        headers=INTAKE_LOG_FIELDNAMES,
+                        value=[],
+                        datatype=["str"] * len(INTAKE_LOG_FIELDNAMES),
+                        interactive=False,
+                        label="Saved intake records",
+                    )
+
             with gr.TabItem("2. Options"):
                 gr.Markdown("### Candidate options")
                 option_boxes = [
@@ -224,6 +236,10 @@ def build_app():
                 existing_license_or_contract,
             ],
             outputs=intake_summary_md,
+        )
+
+        refresh_log_btn.click(
+            load_intake_log, outputs=[intake_log_df, intake_log_status_md]
         )
 
         load_blank_btn.click(
