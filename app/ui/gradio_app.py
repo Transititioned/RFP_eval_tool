@@ -12,6 +12,7 @@ from app.data.sample_data import (
     blank_capability_matrix,
     blank_viability_gate,
 )
+from app.logic.persistence import append_intake_record
 from app.logic.readout import generate_readout
 
 CUSTOM_CSS = """
@@ -82,6 +83,24 @@ def save_intake(
         "",
         "Continue to **Options**, then **Assessment Detail**.",
     ]
+
+    save_status = append_intake_record(
+        {
+            "project_name": project_name,
+            "requester_role": requester_role,
+            "business_area": business_area,
+            "problem_statement": problem_statement,
+            "why_now": why_now,
+            "primary_capability": primary_capability,
+            "desired_decision_date": desired_decision_date,
+            "budget_confirmed": budget_confirmed,
+            "compliance_deadline": compliance_deadline,
+            "incumbent_or_preferred_vendor": incumbent_or_preferred_vendor,
+            "existing_license_or_contract": existing_license_or_contract,
+        }
+    )
+    lines += ["", save_status]
+
     return "\n".join(lines)
 
 

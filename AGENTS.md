@@ -12,8 +12,22 @@ Core principle: evaluate the capability first; check enterprise viability before
 Role lenses, Market Clarity, bid waste reduction, vendor self-assessment, challenger
 path, document upload, AI scoring, RFP PDF parsing, procurement workflow, report
 builder, broad exports, architecture repository features, generated clarification
-questions, roll-up scores, weighting, evidence fields, authentication, database
-persistence.
+questions, roll-up scores, weighting, evidence fields, authentication.
+
+Intake persistence is a deliberate, narrow exception (see below) — don't read this
+list as still excluding it, and don't expand persistence beyond the intake log
+without asking first.
+
+## Intake persistence
+
+Intake form saves append a row to a private Hugging Face Dataset repo
+(`app/logic/persistence.py`), not a database. No local DB, no ORM. Configured via
+env vars: `HF_TOKEN` (Space secret, required to save) and
+`HF_INTAKE_DATASET_REPO` (optional override; defaults to
+`Ausadmin/RFP_evaluation_tool-intake`). Without `HF_TOKEN` set (e.g. running
+locally without secrets), saving is skipped and the UI says so — this is expected,
+not a bug. Free tier, chosen over the $5+/month persistent storage add-on while
+this is still a learning-stage prototype.
 
 ## Implementation rules
 

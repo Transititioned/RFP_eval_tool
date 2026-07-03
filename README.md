@@ -37,15 +37,29 @@ Deployed to Hugging Face Spaces by pushing to the `hf` remote:
 git push hf main
 ```
 
+## Intake persistence
+
+Saving the Intake form appends a row to a private Hugging Face Dataset repo (free
+tier — no paid storage add-on). To enable it on the Space:
+
+1. Create a private dataset repo, e.g. `Ausadmin/RFP_evaluation_tool-intake` (or
+   set `HF_INTAKE_DATASET_REPO` to a different repo id).
+2. Add an `HF_TOKEN` secret to the Space (Settings → Variables and secrets) with
+   write access.
+
+Without `HF_TOKEN` set — e.g. running locally without secrets — saving is skipped
+and the Intake tab says so; the rest of the app still works.
+
 ## Structure
 
 - `app.py` — entry point
 - `app/data/sample_data.py` — scenario, headers, blank and completed sample grids
 - `app/logic/readout.py` — plain-English readout generation
+- `app/logic/persistence.py` — appends intake records to a private HF Dataset repo
 - `app/ui/gradio_app.py` — Gradio UI
 - `docs/` — product brief and validation test script
 - `tests/` — readout logic tests
 
 ## Deliberately out of scope for MVP-0
 
-Role lenses, market clarity, bid waste reduction, vendor self-assessment, document upload, AI scoring, RFP parsing, procurement workflow, report builder, exports, weighting, evidence fields, authentication, persistence.
+Role lenses, market clarity, bid waste reduction, vendor self-assessment, document upload, AI scoring, RFP parsing, procurement workflow, report builder, exports, weighting, evidence fields, authentication. (Intake persistence is a narrow, deliberate exception — see above.)
