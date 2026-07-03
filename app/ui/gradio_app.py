@@ -7,7 +7,6 @@ from app.data.sample_data import (
     CAPABILITY_VALUES,
     COMPLETED_CAPABILITY_MATRIX,
     COMPLETED_VIABILITY_GATE,
-    SCENARIO_SUMMARY,
     VIABILITY_HEADERS,
     VIABILITY_VALUES,
     blank_capability_matrix,
@@ -88,11 +87,12 @@ def save_intake(
 
 def build_app():
     with gr.Blocks(title="RFP Evaluation Tool — MVP-0") as demo:
-        gr.Markdown("# RFP Evaluation Tool — Capability Sourcing Workbench MVP-0")
+        gr.Markdown("# Make the right sourcing call before the RFP starts.")
         gr.Markdown(
-            "*Evaluate the capability first. Check enterprise viability before sparkle.*"
+            "Save your time and make the right call. Our AI assistant will make "
+            "sourcing software simple and easy. And audit trailed every step of "
+            "the way."
         )
-        gr.Markdown(SCENARIO_SUMMARY)
 
         with gr.Tabs():
             with gr.TabItem("1. Intake"):
