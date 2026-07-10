@@ -85,6 +85,12 @@ Modelled on how real evaluation panels work, not on an aggregate formula:
 - Mandatory gates are pass/fail-style and sit outside scoring entirely;
   they are never diluted by a good score elsewhere.
 - The system never silently declares an overall winner.
+- "Out of scope" (below) refers to the tool computing or asserting a
+  final blended score or winner **on its own** — not to scores or
+  roll-ups as such. A summary built entirely from human-entered
+  consensus is a legitimate future feature. See the 2026-07-10 decision
+  in [docs/product_decisions.md](docs/product_decisions.md) for the full
+  resolution.
 
 See [docs/product_decisions.md](docs/product_decisions.md) for the full
 rationale.
@@ -140,8 +146,9 @@ and the Intake tab says so; the rest of the app still works.
 ## Deliberately out of scope for now
 
 Real document upload/parsing, AI-generated summarisation or research,
-weighted/aggregate scoring, authentication, multi-tenant workspaces, real
-report exports, procurement-suite integrations. See
+automatic/algorithmic scoring (the tool computing or asserting a final
+blended score or winner on its own), authentication, multi-tenant
+workspaces, real report exports, procurement-suite integrations. See
 [docs/backlog.md](docs/backlog.md) for the full deferred list — notably,
 this is a proof-of-concept on a public Hugging Face Space and should only
 ever hold synthetic/sample data, not real vendor proposals, until private
