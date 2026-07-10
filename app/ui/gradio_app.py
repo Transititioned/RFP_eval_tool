@@ -12,6 +12,20 @@ from app.data.sample_data import (
     blank_capability_matrix,
     blank_viability_gate,
 )
+from app.data.comparison_sample import (
+    ARCHITECTURE_DOMAINS,
+    CRITERIA,
+    SCORE_SCALE,
+    VENDORS,
+)
+from app.logic.comparison import (
+    comparison_rows,
+    format_consensus_log,
+    format_criterion_detail,
+    format_focus_queue,
+    gate_rows,
+    record_consensus,
+)
 from app.logic.persistence import FIELDNAMES as INTAKE_LOG_FIELDNAMES
 from app.logic.persistence import append_intake_record, load_intake_log
 from app.logic.readout import generate_readout
@@ -220,6 +234,63 @@ def build_app():
                 gr.Markdown("### Validation questions for testers")
                 gr.Markdown(VALIDATION_QUESTIONS_MD)
 
+            with gr.TabItem("6. Compare (preview)"):
+                gr.Markdown("### Side-by-side vendor comparison")
+                gr.Markdown(
+                    "_Preview with sample data: two mock proposals against the "
+                    "customer/case scenario. Panel members score individually; "
+                    "consensus is reached in the evaluation workshop and recorded "
+                    "with a rationale. The tool never computes a blended winner._"
+                )
+
+                gr.Markdown("#### Mandatory gates (cannot be offset by scores)")
+                gr.Dataframe(
+                    headers=["Gate"] + VENDORS,
+                    value=gate_rows(),
+                    interactive=False,
+                    label="Mandatory gates",
+                )
+
+                gr.Markdown("#### Criterion comparison")
+                domain_dd = gr.Dropdown(
+                    ARCHITECTURE_DOMAINS,
+                    value=ARCHITECTURE_DOMAINS[0],
+                    label="Architecture domain",
+                )
+                comparison_df = gr.Dataframe(
+                    headers=["Criterion"] + VENDORS,
+                    value=comparison_rows(ARCHITECTURE_DOMAINS[0]),
+                    interactive=False,
+                    wrap=True,
+                    label="Vendor responses (evidence-linked)",
+                )
+
+                focus_md = gr.Markdown(format_focus_queue())
+
+                gr.Markdown("#### Criterion detail and workshop consensus")
+                gr.Markdown(f"_Score scale: {SCORE_SCALE}._")
+                criterion_dd = gr.Dropdown(
+                    [c["id"] for c in CRITERIA],
+                    value=CRITERIA[0]["id"],
+                    label="Criterion",
+                )
+                detail_md = gr.Markdown(format_criterion_detail(CRITERIA[0]["id"]))
+
+                with gr.Row():
+                    consensus_vendor_dd = gr.Dropdown(VENDORS, label="Vendor")
+                    consensus_score_dd = gr.Dropdown(
+                        [0, 1, 2, 3, 4, 5], label="Consensus score"
+                    )
+                consensus_rationale_tb = gr.Textbox(
+                    label="Consensus rationale (required)", lines=2
+                )
+                record_consensus_btn = gr.Button(
+                    "Record consensus", variant="primary"
+                )
+                consensus_status_md = gr.Markdown("")
+                consensus_log_state = gr.State([])
+                consensus_log_md = gr.Markdown(format_consensus_log([]))
+
         save_intake_btn.click(
             save_intake,
             inputs=[
@@ -252,6 +323,31 @@ def build_app():
             lambda cap, via: generate_readout(cap.values.tolist(), via.values.tolist()),
             inputs=[capability_df, viability_df],
             outputs=readout_md,
+        )
+
+        domain_dd.change(
+            comparison_rows, inputs=domain_dd, outputs=comparison_df
+        )
+        criterion_dd.change(
+            format_criterion_detail, inputs=criterion_dd, outputs=detail_md
+        )
+
+        def on_record_consensus(log, criterion_id, vendor, score, rationale):
+            log, message = record_consensus(
+                log, criterion_id, vendor, score, rationale
+            )
+            return log, message, format_consensus_log(log)
+
+        record_consensus_btn.click(
+            on_record_consensus,
+            inputs=[
+                consensus_log_state,
+                criterion_dd,
+                consensus_vendor_dd,
+                consensus_score_dd,
+                consensus_rationale_tb,
+            ],
+            outputs=[consensus_log_state, consensus_status_md, consensus_log_md],
         )
 
     return demo
