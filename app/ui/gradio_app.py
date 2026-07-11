@@ -26,6 +26,7 @@ from app.logic.comparison import (
     gate_rows,
     record_consensus,
 )
+from app.logic.overview import stage_statuses
 from app.logic.persistence import FIELDNAMES as INTAKE_LOG_FIELDNAMES
 from app.logic.persistence import append_intake_record, load_intake_log
 from app.logic.readout import generate_readout
@@ -54,6 +55,51 @@ VALIDATION_QUESTIONS_MD = (
     "4. Would you actually fill this in for a real sourcing decision?\n"
     "5. Who would own this artifact in your organisation?"
 )
+
+OVERVIEW_INTRO_MD = (
+    "Workflow status at a glance for the sourcing evaluation. This restates "
+    "progress already captured in the tabs below — it does not compute a "
+    "score, weighting, or recommendation."
+)
+
+# Presentation-only status -> (background, text) colour mapping for the
+# Overview status chips. Deliberately muted; no business logic lives here.
+_OVERVIEW_STATUS_COLORS = {
+    "Not started": ("#f1f1f1", "#555555"),
+    "In progress": ("#e8f0fe", "#1a4480"),
+    "Needs attention": ("#fdf3e0", "#8a5a00"),
+    "Ready for approval": ("#e6f4f1", "#0f6657"),
+    "Complete": ("#e6f4ea", "#1e7e34"),
+}
+
+
+def _overview_status_chip(status):
+    bg, fg = _OVERVIEW_STATUS_COLORS.get(status, ("#f1f1f1", "#555555"))
+    return (
+        f'<span style="background:{bg};color:{fg};padding:2px 10px;'
+        f'border-radius:3px;font-size:0.85em;white-space:nowrap;">{status}</span>'
+    )
+
+
+def _overview_table_rows(statuses):
+    """Render app.logic.overview.stage_statuses() output as Dataframe rows."""
+    return [
+        [s["stage"], _overview_status_chip(s["status"]), s["next_action"]]
+        for s in statuses
+    ]
+
+
+def refresh_overview(capability_grid, viability_grid):
+    """Refresh the Overview tab's workflow status table.
+
+    Thin wiring: fetches the persisted intake log (degrading to [] if
+    HF_TOKEN is absent or the fetch fails, same as the Intake tab's saved
+    log viewer) and defers all status logic to
+    app.logic.overview.stage_statuses.
+    """
+    intake_rows, _log_status = load_intake_log()
+    statuses = stage_statuses(intake_rows, capability_grid, viability_grid)
+    return _overview_table_rows(statuses)
 
 
 def load_blank():
@@ -129,6 +175,28 @@ def build_app():
         )
 
         with gr.Tabs():
+            with gr.TabItem("Overview"):
+                gr.Markdown("### Workflow status")
+                gr.Markdown(OVERVIEW_INTRO_MD)
+
+                refresh_overview_btn = gr.Button("Refresh status")
+                overview_df = gr.Dataframe(
+                    headers=["Stage", "Status", "Next recommended action"],
+                    value=_overview_table_rows(
+                        stage_statuses(
+                            intake_log_rows=[],
+                            capability_grid=blank_capability_matrix(),
+                            viability_grid=blank_viability_gate(),
+                        )
+                    ),
+                    datatype=["str", "html", "str"],
+                    interactive=False,
+                    wrap=True,
+                    row_count=(11, "fixed"),
+                    column_count=(3, "fixed"),
+                    label="Stage status",
+                )
+
             with gr.TabItem("1. Intake"):
                 with gr.Row():
                     project_name = gr.Textbox(label="Project / sourcing name")
@@ -290,6 +358,12 @@ def build_app():
                 consensus_status_md = gr.Markdown("")
                 consensus_log_state = gr.State([])
                 consensus_log_md = gr.Markdown(format_consensus_log([]))
+
+        refresh_overview_btn.click(
+            lambda cap, via: refresh_overview(cap.values.tolist(), via.values.tolist()),
+            inputs=[capability_df, viability_df],
+            outputs=overview_df,
+        )
 
         save_intake_btn.click(
             save_intake,

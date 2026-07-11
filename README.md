@@ -28,33 +28,41 @@ contract** — features are prioritised by value, not by the plan's order.
 
 ## What the app does today
 
-The app opens into a guided six-tab workflow. Each tab also stands alone —
+The app opens into a guided seven-tab workflow. Each tab also stands alone —
 you don't have to complete earlier tabs to use a later one.
 
-1. **Intake** — sourcing request fields (project name, requester role,
+1. **Overview** — workflow status at a glance: one row per stage (Intake,
+   Options, Assessment Detail, Readout, Setup, Proposals, Eligibility,
+   Evaluation, Shortlist, Recommendation, Validation) with a status chip
+   (Not started / In progress / Needs attention / Ready for approval /
+   Complete) and a short next-recommended-action line. Statuses are
+   computed honestly from real state (the saved intake log, the current
+   grid values); stages not yet built always show "Not started". A
+   "Refresh status" button re-checks. No scores or completion percentages.
+2. **Intake** — sourcing request fields (project name, requester role,
    business area, problem statement, why now, primary capability, decision
    date, budget/compliance/incumbent/licence flags). "Save intake /
    continue" writes a summary and appends the record to persistent
    storage (see below). A collapsed **saved intake log** viewer lets you
    confirm a save actually landed.
-2. **Options** — five editable candidate-option names for the sourcing
+3. **Options** — five editable candidate-option names for the sourcing
    decision (defaults: ERP module, Case platform, Billing extension, Shiny
    AI product, Hybrid/composite option). Currently a stub — not yet wired
    to the matrices.
-3. **Assessment Detail** — the original MVP-0 grids:
+4. **Assessment Detail** — the original MVP-0 grids:
    - **Capability Coverage Matrix**: does each option do the business
      capability work? (Strong / Partial / Weak / Unknown)
    - **Baseline Viability Gate**: is each option safe, governable and
      viable enough to continue? (Pass / Clarify / Fail / Unknown)
    - "Load blank test" / "Load completed example" buttons; all cells
      editable.
-4. **Readout** — a plain-English interpretation of the two grids above. No
+5. **Readout** — a plain-English interpretation of the two grids above. No
    scores, no weighting, no roll-ups — it only restates what the grids
    already show, and calls out options that look viable, need
    clarification, or shouldn't proceed yet.
-5. **Validation** — the five standing questions for anyone testing the
+6. **Validation** — the five standing questions for anyone testing the
    tool (below).
-6. **Compare (preview)** — side-by-side vendor comparison, the product's
+7. **Compare (preview)** — side-by-side vendor comparison, the product's
    central experience, previewed against two sample vendor proposals:
    - **Mandatory gates** shown separately from scoring (data residency,
      data export, audit logging) — a gate failure can never be offset by
@@ -143,12 +151,13 @@ and the Intake tab says so; the rest of the app still works.
 - `app.py` — entry point
 - `app/data/sample_data.py` — scenario, headers, blank and completed sample grids
 - `app/data/comparison_sample.py` — sample vendor proposals, criteria, gates and panel scores for Compare
+- `app/logic/overview.py` — per-stage workflow status for the Overview tab
 - `app/logic/readout.py` — plain-English readout generation
 - `app/logic/comparison.py` — comparison rows, score spread, focus queue, consensus recording
 - `app/logic/persistence.py` — appends intake records to a private HF Dataset repo
-- `app/ui/gradio_app.py` — Gradio UI (six-tab workflow shell)
+- `app/ui/gradio_app.py` — Gradio UI (seven-tab workflow shell)
 - `docs/` — product brief, product decisions, backlog, validation test script
-- `tests/` — unit tests for readout and comparison logic
+- `tests/` — unit tests for readout, comparison, and overview logic
 
 ## Validation questions for testers
 

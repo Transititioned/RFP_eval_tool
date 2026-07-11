@@ -31,6 +31,7 @@ python app.py
 # Run tests (no pytest dependency — plain scripts with test_ functions)
 python tests/test_readout.py
 python tests/test_comparison.py
+python tests/test_overview.py
 
 # Deploy (after pushing to GitHub origin)
 git push hf main
@@ -72,8 +73,8 @@ hosting is in place (see `docs/backlog.md`).
 ## Architecture
 
 Python + Gradio only (not React/Vercel). Single `gr.Blocks` app with a
-six-tab workflow shell; each tab is designed to stand alone (a user shouldn't
-have to complete earlier tabs to use a later one).
+seven-tab workflow shell; each tab is designed to stand alone (a user
+shouldn't have to complete earlier tabs to use a later one).
 
 ```
 app.py                        entry point: builds and launches the Gradio Blocks app
@@ -82,11 +83,13 @@ app/data/sample_data.py       MVP-0 scenario: options, capability/viability rows
 app/data/comparison_sample.py Compare-tab sample data: vendors, evaluators, architecture
                                domains, mandatory gates, criteria, extracted responses
                                (evidence/confidence/gaps), and panel scores
+app/logic/overview.py         pure functions: intake log + grid values -> per-stage
+                               workflow status (chip label + next recommended action)
 app/logic/readout.py          pure functions: grid values -> plain-English readout text
 app/logic/comparison.py       pure functions: comparison rows, gate rows, score spread,
                                focus queue, consensus recording/formatting
 app/logic/persistence.py      appends intake records to a private HF Dataset repo (Hub API)
-app/ui/gradio_app.py          the actual UI: builds all six tabs and wires callbacks
+app/ui/gradio_app.py          the actual UI: builds all seven tabs and wires callbacks
 ```
 
 Data/logic/UI are cleanly separated: `app/data` holds static sample content,
@@ -97,25 +100,36 @@ handlers. When adding a feature, prefer keeping new business logic in
 `app/logic` and calling it from thin UI callbacks, matching the existing
 pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 
-### The six tabs
+### The seven tabs
 
-1. **Intake** — sourcing request form. "Save intake / continue" builds a
+1. **Overview** — workflow status at a glance. One row per stage (Intake,
+   Options, Assessment Detail, Readout, Setup, Proposals, Eligibility,
+   Evaluation, Shortlist, Recommendation, Validation) with a status chip
+   (Not started / In progress / Needs attention / Ready for approval /
+   Complete) and a next-recommended-action line, computed by
+   `stage_statuses()` in `app/logic/overview.py`. Statuses are honest and
+   cheap: Intake from the persistence log, Assessment Detail / Readout from
+   the live grid values; stages that don't exist yet are hardcoded "Not
+   started" — never fabricated from sample data. A "Refresh status" button
+   re-reads the intake log and current grid values. No scores, no
+   percentages-complete, no ranking.
+2. **Intake** — sourcing request form. "Save intake / continue" builds a
    markdown summary and calls `append_intake_record` (persistence, see
    below). Has a collapsible saved-log viewer (`load_intake_log`) to confirm
    a save landed.
-2. **Options** — five editable candidate-option name textboxes. Currently a
+3. **Options** — five editable candidate-option name textboxes. Currently a
    stub, not yet wired to the matrices below.
-3. **Assessment Detail** — the original MVP-0 grids, both editable
+4. **Assessment Detail** — the original MVP-0 grids, both editable
    `gr.Dataframe` tables keyed by `OPTIONS` from `sample_data.py`:
    - **Capability Coverage Matrix**: Strong / Partial / Weak / Unknown per
      capability x option.
    - **Baseline Viability Gate**: Pass / Clarify / Fail / Unknown per check x
      option.
-4. **Readout** — `generate_readout()` turns the two grids above into
+5. **Readout** — `generate_readout()` turns the two grids above into
    plain-English paragraphs, bucketing each option into viable / needs
    clarification / should not proceed. No scores.
-5. **Validation** — static standing questions for anyone testing the tool.
-6. **Compare (preview)** — the product's central experience, previewed
+6. **Validation** — static standing questions for anyone testing the tool.
+7. **Compare (preview)** — the product's central experience, previewed
    against two sample vendor proposals (`comparison_sample.py`):
    - Mandatory gates shown separately from scoring — a gate failure can
      never be offset by a good score elsewhere.
