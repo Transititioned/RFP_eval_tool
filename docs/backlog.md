@@ -16,7 +16,9 @@ is addressed.
 - Upload size limits and file-type validation.
 - Temporary-file cleanup after ingestion.
 - Secret handling review (tokens, dataset repos).
-- Data retention/deletion story for uploaded proposals.
+- Data retention/deletion story for real proposal documents, if/when
+  document handling is built (the current Proposals tab is a sample-data
+  readiness register only — no upload or ingestion exists today).
 
 ## Multi-tenancy / consultancy model (much later)
 
