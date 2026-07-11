@@ -49,13 +49,17 @@ Role lenses, Market Clarity, bid waste reduction, vendor self-assessment,
 challenger path, real document upload/parsing, AI-generated scoring or
 summarisation, RFP PDF parsing, procurement workflow integrations, report
 builder, broad exports, architecture repository features, generated
-clarification questions, roll-up/aggregate/weighted scores, authentication,
-multi-tenant workspaces.
+clarification questions, authentication, multi-tenant workspaces.
 
 **No scoring, no weighting, no roll-ups in the Readout tab or capability/
 viability grids** — the readout only restates what the grids already show.
-The Compare tab *does* have quantitative panel scores (0–5), but the tool
-still never computes or asserts a blended winner — see "Scoring model" below.
+The Compare tab has quantitative panel scores with human consensus
+(shipped, default), and — per the 2026-07-11 decision, not yet built — a
+second traditional weighted criteria scoring mode (procurement-standard,
+for processes that require it). In both modes the tool may compute and
+display a score or ranking, but never auto-declares a winner —
+"Recommended supplier" is always a separate, deliberate human action,
+never an automatic rendering of the top score. See "Scoring model" below.
 
 Intake persistence (below) is a deliberate, narrow exception to the
 no-persistence rule — don't expand persistence beyond the intake log without
@@ -128,19 +132,33 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 
 ### Scoring model (see `docs/product_decisions.md` for full rationale)
 
-Modelled on how real evaluation panels work, not an aggregate formula:
+Two scoring modes, both bound by the same rule: the tool may compute and
+display a score or ranking, but never auto-declares a winner. **Panel +
+Consensus is shipped and the default today.** Traditional weighted was
+decided on 2026-07-11 as a second, selectable mode but is **not yet
+implemented** — Compare currently only offers Panel + Consensus.
 
+**Panel + Consensus (default)** — modelled on how real evaluation panels
+work:
 - Each evaluator scores criteria individually and quantitatively
   (`PANEL_SCORES`).
-- Score divergence across evaluators (`score_spread`) is a primary signal —
-  it drives `focus_queue()` ordering: gate failures → unanswered criteria →
-  high score spread (>=2) → low-confidence evidence.
-- Consensus is a human decision entered in the evaluation workshop, requires
-  a rationale, and is recorded *alongside* (never overwriting) individual
-  scores.
-- The system never computes or asserts a final blended score or winner.
-- Mandatory gates are pass/fail-style, sit outside scoring entirely, and are
-  never diluted by a good score elsewhere.
+- Score divergence across evaluators (`score_spread`) is a primary
+  signal — it drives `focus_queue()` ordering: gate failures -> unanswered
+  criteria -> high score spread (>=2) -> low-confidence evidence.
+- Consensus is a human decision entered in the evaluation workshop,
+  requires a rationale, and is recorded *alongside* (never overwriting)
+  individual scores.
+
+**Traditional weighted** — the procurement-standard model many governance
+processes require and can defend to auditors:
+- Criteria x weight -> total per vendor, displayed and sortable.
+- The total is a computed number, not a decision — "Recommended
+  supplier" still requires a separate human action with rationale.
+
+Shared across both modes:
+- The system never auto-declares a final winner.
+- Mandatory gates are pass/fail-style, sit outside scoring entirely in
+  both modes, and are never diluted by a good score elsewhere.
 
 ## Intake persistence
 

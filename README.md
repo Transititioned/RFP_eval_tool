@@ -74,7 +74,14 @@ you don't have to complete earlier tabs to use a later one.
 
 ## Scoring model
 
-Modelled on how real evaluation panels work, not on an aggregate formula:
+Two scoring modes, both bound by the same rule: the tool may compute and
+display a score or ranking, but never auto-declares a winner. **Panel +
+Consensus is shipped and the default today.** Traditional weighted was
+decided on 2026-07-11 as a second, selectable mode but is **not yet
+implemented** — Compare currently only offers Panel + Consensus.
+
+**Panel + Consensus (default, shipped)** — modelled on how real evaluation
+panels work, not on an aggregate formula:
 
 - Each evaluator (Business Rep, Architecture, Tech PM, etc.) scores
   criteria individually.
@@ -82,14 +89,22 @@ Modelled on how real evaluation panels work, not on an aggregate formula:
   workshop focus queue.
 - Consensus is reached by humans in the evaluation meeting and recorded
   with a rationale — it is a decision, not a computed average.
+
+**Traditional weighted (decided, not yet built)** — the procurement-standard
+model many governance processes require and can defend to auditors:
+
+- Criteria x weight -> total per vendor, displayed and sortable.
+- The total is a computed number, not a decision — "Recommended
+  supplier" still requires a separate human action with rationale.
+
+Shared across both modes:
+
 - Mandatory gates are pass/fail-style and sit outside scoring entirely;
   they are never diluted by a good score elsewhere.
-- The system never silently declares an overall winner.
-- "Out of scope" (below) refers to the tool computing or asserting a
-  final blended score or winner **on its own** — not to scores or
-  roll-ups as such. A summary built entirely from human-entered
-  consensus is a legitimate future feature. See the 2026-07-10 decision
-  in [docs/product_decisions.md](docs/product_decisions.md) for the full
+- The system never auto-declares a final winner. "Recommended supplier"
+  is always a separate, deliberate human action, never an automatic
+  rendering of the top score. See the 2026-07-11 decision in
+  [docs/product_decisions.md](docs/product_decisions.md) for the full
   resolution.
 
 See [docs/product_decisions.md](docs/product_decisions.md) for the full
@@ -146,9 +161,9 @@ and the Intake tab says so; the rest of the app still works.
 ## Deliberately out of scope for now
 
 Real document upload/parsing, AI-generated summarisation or research,
-automatic/algorithmic scoring (the tool computing or asserting a final
-blended score or winner on its own), authentication, multi-tenant
-workspaces, real report exports, procurement-suite integrations. See
+the tool auto-declaring a final winner without a separate human
+recommendation action, authentication, multi-tenant workspaces, real
+report exports, procurement-suite integrations. See
 [docs/backlog.md](docs/backlog.md) for the full deferred list — notably,
 this is a proof-of-concept on a public Hugging Face Space and should only
 ever hold synthetic/sample data, not real vendor proposals, until private

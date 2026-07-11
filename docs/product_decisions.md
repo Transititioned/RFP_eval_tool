@@ -2,6 +2,35 @@
 
 Decision record for the Capability Sourcing Workbench upgrade. Newest first.
 
+## 2026-07-11 — Scoring model: add traditional weighted mode alongside panel consensus
+
+Revisits the blanket "no weighted scores" hard limit from 2026-07-10. The
+original rationale was narrower than the limit implied: the risk being
+managed is *automated decision-making* — the tool silently declaring a
+winner — not scoring itself. That's the right default caution for
+AI-generated tooling, but it's overcalibrated here: this product is
+decision *support*, not decision *making*, and criteria x weight scoring
+is the model most procurement governance processes already require and
+can defend to auditors. Excluding it outright makes the tool harder to
+adopt inside real procurement processes without a compensating benefit.
+
+Decision:
+- Add "Traditional weighted" as a second, selectable Compare-tab scoring
+  mode alongside "Panel + Consensus". Criteria x weight -> total per
+  vendor, displayed and sortable.
+- The non-negotiable rule both modes obey: the tool may compute and
+  display a score or ranking, but "Recommended supplier" is always a
+  separate, deliberate, human-entered action — never an automatic
+  rendering of the top-ranked total. This is the actual boundary between
+  decision support and decision making, and it's the part of the
+  2026-07-10 decision that stays intact.
+- Mandatory gates continue to sit outside both scoring modes and are
+  never diluted by score, in either mode.
+- Panel + Consensus remains the default/recommended mode; Traditional
+  weighted is an alternative, not a replacement — offered because
+  procurement is often a gatekeeper on RFP processes and traditional
+  scoring is what their governance expects.
+
 ## 2026-07-10 — Scoring model: panel scores + moderated consensus
 
 How real RFP evaluations work, and what the product models:

@@ -12,7 +12,7 @@ capability first; check enterprise viability before sparkle.
 ## Hard scope limits — do not add
 
 Role lenses, Market Clarity, bid waste reduction, vendor self-assessment,
-challenger path, document upload, automatic/algorithmic scoring, RFP PDF
+challenger path, document upload, AI-generated scoring or summarisation, RFP PDF
 parsing, procurement workflow, report builder, broad exports, architecture
 repository features, generated clarification questions, authentication.
 
@@ -20,11 +20,13 @@ Intake persistence is a deliberate, narrow exception (see below) — don't
 read this list as still excluding it, and don't expand persistence beyond
 the intake log without asking first.
 
-Panel scores, score variance, evidence/confidence fields, and human-entered
-consensus roll-ups are **not** on this list — they're shipped features of
-the Compare tab. What's excluded is the tool computing, weighting, or
-asserting a blended score or winner **on its own**. See the 2026-07-10
-entry in `docs/product_decisions.md` for the full resolution.
+Panel scores, score variance, evidence/confidence fields, human-entered
+consensus roll-ups, and traditional weighted criteria scoring are **not**
+on this list — they're shipped/planned Compare-tab features, offered as
+two selectable modes (Panel + Consensus, and Traditional weighted).
+What's excluded is the tool auto-declaring a winner without a separate
+human recommendation action. See the 2026-07-11 entry in
+`docs/product_decisions.md` for the full resolution.
 
 ## Intake persistence
 
@@ -42,7 +44,7 @@ this is still a learning-stage prototype.
 - Python + Gradio only. Not React/Vercel.
 - Prefer simple readable Python over clever abstractions.
 - Keep Hugging Face Spaces compatibility (pinned `gradio==6.19.0`, matching the Space `sdk_version` in README.md).
-- The **Readout tab** only restates the grids — no scores, no weighting, no roll-ups there. That's specific to Readout, not a whole-app rule: the **Compare tab** legitimately has panel scores, variance, and human-entered consensus roll-ups. Don't add algorithmic/automatic scoring to either.
+- The **Readout tab** only restates the grids — no scores, no weighting, no roll-ups, and no algorithmic/automatic scoring there. That's specific to Readout, not a whole-app rule: the **Compare tab** legitimately has panel scores, variance, human-entered consensus roll-ups, and (per the 2026-07-11 decision) traditional weighted criteria totals — algorithmic scoring is permitted there, but the tool must never use it to auto-declare a winner; "Recommended supplier" is always a separate human action.
 - Design tone: serious enterprise B2B, restrained, architecture-review-board credible.
 
 ## Workflow
