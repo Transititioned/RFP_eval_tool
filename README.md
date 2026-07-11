@@ -28,7 +28,7 @@ contract** — features are prioritised by value, not by the plan's order.
 
 ## What the app does today
 
-The app opens into a guided seven-tab workflow. Each tab also stands alone —
+The app opens into a guided eight-tab workflow. Each tab also stands alone —
 you don't have to complete earlier tabs to use a later one.
 
 1. **Overview** — workflow status at a glance: one row per stage (Intake,
@@ -37,8 +37,9 @@ you don't have to complete earlier tabs to use a later one.
    (Not started / In progress / Needs attention / Ready for approval /
    Complete) and a short next-recommended-action line. Statuses are
    computed honestly from real state (the saved intake log, the current
-   grid values); stages not yet built always show "Not started". A
-   "Refresh status" button re-checks. No scores or completion percentages.
+   grid values, the Setup approval state); stages not yet built always
+   show "Not started". A "Refresh status" button re-checks. No scores or
+   completion percentages.
 2. **Intake** — sourcing request fields (project name, requester role,
    business area, problem statement, why now, primary capability, decision
    date, budget/compliance/incumbent/licence flags). "Save intake /
@@ -60,9 +61,22 @@ you don't have to complete earlier tabs to use a later one.
    scores, no weighting, no roll-ups — it only restates what the grids
    already show, and calls out options that look viable, need
    clarification, or shouldn't proceed yet.
-6. **Validation** — the five standing questions for anyone testing the
+6. **Setup** — evaluation framework configuration: a procurement summary
+   refreshed live from the Intake fields, the named evaluation panel,
+   mandatory requirements (shown outside scoring), a scoring mode
+   selector (Panel + Consensus, default, or Traditional weighted — per
+   the 2026-07-11 decision; the weighted-totals view in Compare is not
+   built yet), an editable criteria-and-weights table with a
+   weights-sum check, the 0–5 scoring scale anchors, and the shortlist
+   rule. **Approving the evaluation framework locks it**: criteria,
+   weights, scoring mode, and shortlist rule become read-only, and any
+   change afterwards requires an explicit "Reopen" with a stated reason
+   — every approve/reopen event is timestamped in a visible audit log.
+   This is what prevents weights being quietly retuned after proposals
+   arrive.
+7. **Validation** — the five standing questions for anyone testing the
    tool (below).
-7. **Compare (preview)** — side-by-side vendor comparison, the product's
+8. **Compare (preview)** — side-by-side vendor comparison, the product's
    central experience, previewed against two sample vendor proposals:
    - **Mandatory gates** shown separately from scoring (data residency,
      data export, audit logging) — a gate failure can never be offset by
@@ -85,8 +99,10 @@ you don't have to complete earlier tabs to use a later one.
 Two scoring modes, both bound by the same rule: the tool may compute and
 display a score or ranking, but never auto-declares a winner. **Panel +
 Consensus is shipped and the default today.** Traditional weighted was
-decided on 2026-07-11 as a second, selectable mode but is **not yet
-implemented** — Compare currently only offers Panel + Consensus.
+decided on 2026-07-11; its framework configuration (mode selector,
+per-criterion weights, weights-sum check) ships in the Setup tab, but
+the weighted-totals view in Compare is **not yet built** — Compare
+currently only offers Panel + Consensus.
 
 **Panel + Consensus (default, shipped)** — modelled on how real evaluation
 panels work, not on an aggregate formula:
@@ -98,8 +114,9 @@ panels work, not on an aggregate formula:
 - Consensus is reached by humans in the evaluation meeting and recorded
   with a rationale — it is a decision, not a computed average.
 
-**Traditional weighted (decided, not yet built)** — the procurement-standard
-model many governance processes require and can defend to auditors:
+**Traditional weighted (configuration shipped in Setup; Compare view not
+yet built)** — the procurement-standard model many governance processes
+require and can defend to auditors:
 
 - Criteria x weight -> total per vendor, displayed and sortable.
 - The total is a computed number, not a decision — "Recommended
@@ -150,14 +167,15 @@ and the Intake tab says so; the rest of the app still works.
 
 - `app.py` — entry point
 - `app/data/sample_data.py` — scenario, headers, blank and completed sample grids
-- `app/data/comparison_sample.py` — sample vendor proposals, criteria, gates and panel scores for Compare
+- `app/data/comparison_sample.py` — sample vendor proposals, criteria (with weights), gates, panel scores, evaluation team, scoring scale/modes and shortlist rule for Compare and Setup
 - `app/logic/overview.py` — per-stage workflow status for the Overview tab
+- `app/logic/setup.py` — evaluation-framework approval lock and weights-sum check
 - `app/logic/readout.py` — plain-English readout generation
 - `app/logic/comparison.py` — comparison rows, score spread, focus queue, consensus recording
 - `app/logic/persistence.py` — appends intake records to a private HF Dataset repo
-- `app/ui/gradio_app.py` — Gradio UI (seven-tab workflow shell)
+- `app/ui/gradio_app.py` — Gradio UI (eight-tab workflow shell)
 - `docs/` — product brief, product decisions, backlog, validation test script
-- `tests/` — unit tests for readout, comparison, and overview logic
+- `tests/` — unit tests for readout, comparison, overview, and setup logic
 
 ## Validation questions for testers
 

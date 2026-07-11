@@ -32,6 +32,7 @@ python app.py
 python tests/test_readout.py
 python tests/test_comparison.py
 python tests/test_overview.py
+python tests/test_setup.py
 
 # Deploy (after pushing to GitHub origin)
 git push hf main
@@ -55,9 +56,11 @@ clarification questions, authentication, multi-tenant workspaces.
 **No scoring, no weighting, no roll-ups in the Readout tab or capability/
 viability grids** — the readout only restates what the grids already show.
 The Compare tab has quantitative panel scores with human consensus
-(shipped, default), and — per the 2026-07-11 decision, not yet built — a
-second traditional weighted criteria scoring mode (procurement-standard,
-for processes that require it). In both modes the tool may compute and
+(shipped, default), and — per the 2026-07-11 decision — a second
+traditional weighted criteria scoring mode (procurement-standard, for
+processes that require it; the mode selector and per-criterion weights
+ship in the Setup tab, but the weighted-totals view in Compare is not
+built yet). In both modes the tool may compute and
 display a score or ranking, but never auto-declares a winner —
 "Recommended supplier" is always a separate, deliberate human action,
 never an automatic rendering of the top score. See "Scoring model" below.
@@ -72,24 +75,29 @@ hosting is in place (see `docs/backlog.md`).
 
 ## Architecture
 
-Python + Gradio only (not React/Vercel). Single `gr.Blocks` app with a
-seven-tab workflow shell; each tab is designed to stand alone (a user
+Python + Gradio only (not React/Vercel). Single `gr.Blocks` app with an
+eight-tab workflow shell; each tab is designed to stand alone (a user
 shouldn't have to complete earlier tabs to use a later one).
 
 ```
 app.py                        entry point: builds and launches the Gradio Blocks app
 app/data/sample_data.py       MVP-0 scenario: options, capability/viability rows+values,
                                blank/completed sample grids
-app/data/comparison_sample.py Compare-tab sample data: vendors, evaluators, architecture
-                               domains, mandatory gates, criteria, extracted responses
-                               (evidence/confidence/gaps), and panel scores
+app/data/comparison_sample.py Compare/Setup sample data: vendors, evaluators, named
+                               evaluation team, architecture domains, mandatory gates,
+                               criteria (with weights), extracted responses
+                               (evidence/confidence/gaps), panel scores, scoring scale,
+                               scoring modes, and shortlist rule
 app/logic/overview.py         pure functions: intake log + grid values -> per-stage
                                workflow status (chip label + next recommended action)
 app/logic/readout.py          pure functions: grid values -> plain-English readout text
 app/logic/comparison.py       pure functions: comparison rows, gate rows, score spread,
                                focus queue, consensus recording/formatting
 app/logic/persistence.py      appends intake records to a private HF Dataset repo (Hub API)
-app/ui/gradio_app.py          the actual UI: builds all seven tabs and wires callbacks
+app/logic/setup.py            pure functions: evaluation-framework approval lock
+                               (approve/reopen with reasoned, logged events) + weight
+                               sum validation
+app/ui/gradio_app.py          the actual UI: builds all eight tabs and wires callbacks
 ```
 
 Data/logic/UI are cleanly separated: `app/data` holds static sample content,
@@ -100,7 +108,7 @@ handlers. When adding a feature, prefer keeping new business logic in
 `app/logic` and calling it from thin UI callbacks, matching the existing
 pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 
-### The seven tabs
+### The eight tabs
 
 1. **Overview** — workflow status at a glance. One row per stage (Intake,
    Options, Assessment Detail, Readout, Setup, Proposals, Eligibility,
@@ -109,10 +117,11 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
    Complete) and a next-recommended-action line, computed by
    `stage_statuses()` in `app/logic/overview.py`. Statuses are honest and
    cheap: Intake from the persistence log, Assessment Detail / Readout from
-   the live grid values; stages that don't exist yet are hardcoded "Not
-   started" — never fabricated from sample data. A "Refresh status" button
-   re-reads the intake log and current grid values. No scores, no
-   percentages-complete, no ranking.
+   the live grid values, Setup from the framework approval state; stages
+   that don't exist yet are hardcoded "Not started" — never fabricated from
+   sample data. A "Refresh status" button re-reads the intake log, current
+   grid values, and approval state. No scores, no percentages-complete, no
+   ranking.
 2. **Intake** — sourcing request form. "Save intake / continue" builds a
    markdown summary and calls `append_intake_record` (persistence, see
    below). Has a collapsible saved-log viewer (`load_intake_log`) to confirm
@@ -128,8 +137,21 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 5. **Readout** — `generate_readout()` turns the two grids above into
    plain-English paragraphs, bucketing each option into viable / needs
    clarification / should not proceed. No scores.
-6. **Validation** — static standing questions for anyone testing the tool.
-7. **Compare (preview)** — the product's central experience, previewed
+6. **Setup** — evaluation framework configuration: procurement summary
+   (refreshed live from Intake fields), named evaluation team
+   (`EVALUATION_TEAM`), mandatory requirements (read-only view of the
+   gates, outside scoring), scoring mode selector (`SCORING_MODES`, Panel +
+   Consensus default; the Compare weighted-totals view is not built yet),
+   editable criteria/weights table with a `check_weights()` sum validation
+   line, scoring scale anchors (`SCORING_SCALE`), and shortlist rule text.
+   Centerpiece is the **approval lock** (`app/logic/setup.py`): "Approve
+   evaluation framework" flips criteria/weights, shortlist rule, and
+   scoring mode to read-only; editing again requires an explicit "Reopen"
+   with a non-empty reason, and every approve/reopen event is timestamped
+   in a visible, never-cleared log. Approval state is session-only
+   (`gr.State`) — deliberately not persisted.
+7. **Validation** — static standing questions for anyone testing the tool.
+8. **Compare (preview)** — the product's central experience, previewed
    against two sample vendor proposals (`comparison_sample.py`):
    - Mandatory gates shown separately from scoring — a gate failure can
      never be offset by a good score elsewhere.
@@ -149,8 +171,10 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 Two scoring modes, both bound by the same rule: the tool may compute and
 display a score or ranking, but never auto-declares a winner. **Panel +
 Consensus is shipped and the default today.** Traditional weighted was
-decided on 2026-07-11 as a second, selectable mode but is **not yet
-implemented** — Compare currently only offers Panel + Consensus.
+decided on 2026-07-11; its framework configuration (mode selector,
+per-criterion weights, `check_weights()` sum validation) ships in the
+Setup tab, but the weighted-totals view in Compare is **not yet built** —
+Compare currently only offers Panel + Consensus.
 
 **Panel + Consensus (default)** — modelled on how real evaluation panels
 work:

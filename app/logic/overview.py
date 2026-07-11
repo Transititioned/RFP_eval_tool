@@ -40,7 +40,6 @@ STATUSES = (
 # sample vendors).
 _FIXED_NOT_STARTED_ACTIONS = {
     "Options": "Name candidate options in the Options tab once intake is saved.",
-    "Setup": "Not available in this preview build.",
     "Proposals": "Not available in this preview build.",
     "Eligibility": "Not available in this preview build.",
     "Evaluation": "Not available in this preview build.",
@@ -143,7 +142,47 @@ def readout_status(capability_grid, viability_grid):
     )
 
 
-def stage_statuses(intake_log_rows=None, capability_grid=None, viability_grid=None):
+def setup_status(setup_approval_state):
+    """Status/next_action for the Setup stage.
+
+    Derived only from the approval state (app.logic.setup), honestly:
+    - None, or never approved with an empty event log -> "Not started".
+    - Has events but isn't currently approved (i.e. it was approved then
+      reopened) -> "Needs attention" — it needs re-approval before the
+      workbench should treat criteria/weights as locked again.
+    - Currently approved -> "Complete".
+    """
+    if not setup_approval_state:
+        return (
+            "Not started",
+            "Define criteria, weights and mandatory requirements in the Setup tab.",
+        )
+
+    events = setup_approval_state.get("events") or []
+    approved = bool(setup_approval_state.get("approved"))
+
+    if approved:
+        return (
+            "Complete",
+            "Framework approved and locked. Reopen only with a logged reason if it must change.",
+        )
+    if events:
+        return (
+            "Needs attention",
+            "Framework was reopened after approval — review changes and re-approve.",
+        )
+    return (
+        "Not started",
+        "Define criteria, weights and mandatory requirements in the Setup tab.",
+    )
+
+
+def stage_statuses(
+    intake_log_rows=None,
+    capability_grid=None,
+    viability_grid=None,
+    setup_approval_state=None,
+):
     """Status for every workflow stage, in STAGES order.
 
     Returns a list of dicts: [{"stage": str, "status": str, "next_action": str}, ...]
@@ -153,6 +192,11 @@ def stage_statuses(intake_log_rows=None, capability_grid=None, viability_grid=No
         rows, _ = load_intake_log()
         stage_statuses(rows, capability_table_value, viability_table_value)
     This module never fetches its own data and never imports persistence.
+
+    ``setup_approval_state`` is the dict shape produced by
+    app.logic.setup.new_approval_state() / approve_framework() /
+    reopen_framework(); omitted or None behaves exactly as before this
+    parameter existed (Setup hardcoded to "Not started").
     """
     intake_log_rows = intake_log_rows or []
     capability_grid = capability_grid or []
@@ -163,11 +207,13 @@ def stage_statuses(intake_log_rows=None, capability_grid=None, viability_grid=No
         capability_grid, viability_grid
     )
     readout_stat, readout_action = readout_status(capability_grid, viability_grid)
+    setup_stat, setup_action = setup_status(setup_approval_state)
 
     per_stage = {
         "Intake": (intake_stat, intake_action),
         "Assessment Detail": (assessment_stat, assessment_action),
         "Readout": (readout_stat, readout_action),
+        "Setup": (setup_stat, setup_action),
     }
 
     results = []

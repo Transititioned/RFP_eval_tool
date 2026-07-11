@@ -15,7 +15,55 @@ VENDORS = ["Acme CaseWorks", "NovaAI FlowSuite", "Titan Public Sector Suite"]
 
 EVALUATORS = ["Business Rep", "Architect", "Tech PM"]
 
+# Named sample panel for the Setup tab. Keyed by the same role strings as
+# EVALUATORS/PANEL_SCORES — do not rename or reorder EVALUATORS to match this;
+# consumers should look up EVALUATION_TEAM[role] for display, and continue to
+# key scoring data off the role string itself.
+EVALUATION_TEAM = {
+    "Business Rep": {
+        "name": "Priya Chandrasekaran",
+        "title": "Business Representative, Case Services",
+    },
+    "Architect": {
+        "name": "Marcus Odendaal",
+        "title": "Lead Enterprise Architect",
+    },
+    "Tech PM": {
+        "name": "Fiona Nakamura-Blake",
+        "title": "Technical Project Manager",
+    },
+}
+
 SCORE_SCALE = "0 (no evidence) to 5 (strong, evidenced)"
+
+# Descriptive anchor text per score point, 0-5, for the Setup tab. Restates
+# the same 0-5 range as SCORE_SCALE/PANEL_SCORES in fuller procurement
+# language; not a separate scale.
+SCORING_SCALE = {
+    0: "Does not meet the requirement; no evidence offered",
+    1: "Minimal alignment; significant gaps or unsupported claims",
+    2: "Partial alignment; material gaps remain unresolved",
+    3: "Meets the requirement; evidence adequate but not exceptional",
+    4: "Strongly meets the requirement with clear, verified evidence",
+    5: "Fully meets the requirement with strong, verified evidence and no material gaps",
+}
+
+# Selectable Compare-tab scoring modes (see docs/product_decisions.md,
+# 2026-07-11). Panel + Consensus is shipped and the documented default;
+# Traditional weighted is display/sample data only at this stage.
+SCORING_MODES = ["Panel + Consensus", "Traditional weighted"]
+DEFAULT_SCORING_MODE = "Panel + Consensus"
+
+# Sample shortlist rule for the Setup tab. Display text describing a rule the
+# panel applies by hand in the evaluation workshop — the tool does not run
+# this rule or declare a shortlist automatically.
+SHORTLIST_RULE = (
+    "A vendor is shortlisted only if it has passed every mandatory gate and "
+    "reached a minimum consensus score of 3 (\"Meets the requirement\") on "
+    "every criterion, with no criterion left unanswered. Applying this rule "
+    "is a decision the evaluation panel makes in the workshop, not an "
+    "automatic output of the tool."
+)
 
 ARCHITECTURE_DOMAINS = [
     "Application architecture",
@@ -57,41 +105,52 @@ GATES = [
     },
 ]
 
+# "weight" is the criterion's percentage weight for the Traditional weighted
+# scoring mode (docs/product_decisions.md, 2026-07-11). Weights are integers
+# and sum to 100 across CRITERIA in this sample set. Panel + Consensus mode
+# ignores this field entirely.
 CRITERIA = [
     {
         "id": "APP-01",
         "domain": "Application architecture",
         "statement": "Case lifecycle management covers intake, triage, resolution and review",
+        "weight": 20,
     },
     {
         "id": "APP-02",
         "domain": "Application architecture",
         "statement": "Configuration over customisation for business rule changes",
+        "weight": 15,
     },
     {
         "id": "APP-03",
         "domain": "Application architecture",
         "statement": "Clear system-of-record boundaries and data ownership",
+        "weight": 15,
     },
     {
         "id": "APP-04",
         "domain": "Application architecture",
         "statement": "Workflow designer usable by trained business staff",
+        "weight": 10,
     },
     {
         "id": "API-01",
         "domain": "API and integration architecture",
         "statement": "Documented REST APIs cover all core case and customer entities",
+        "weight": 15,
     },
     {
         "id": "API-02",
         "domain": "API and integration architecture",
         "statement": "Event publishing for case state changes (for data lake feed)",
+        "weight": 10,
     },
     {
         "id": "CLD-01",
         "domain": "Cloud architecture",
         "statement": "Disaster recovery: documented RPO/RTO with evidence of testing",
+        "weight": 15,
     },
 ]
 

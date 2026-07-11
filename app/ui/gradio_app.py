@@ -15,7 +15,13 @@ from app.data.sample_data import (
 from app.data.comparison_sample import (
     ARCHITECTURE_DOMAINS,
     CRITERIA,
+    DEFAULT_SCORING_MODE,
+    EVALUATION_TEAM,
+    GATES,
     SCORE_SCALE,
+    SCORING_MODES,
+    SCORING_SCALE,
+    SHORTLIST_RULE,
     VENDORS,
 )
 from app.logic.comparison import (
@@ -30,6 +36,14 @@ from app.logic.overview import stage_statuses
 from app.logic.persistence import FIELDNAMES as INTAKE_LOG_FIELDNAMES
 from app.logic.persistence import append_intake_record, load_intake_log
 from app.logic.readout import generate_readout
+from app.logic.setup import (
+    approve_framework,
+    check_weights,
+    format_approval_log,
+    is_locked,
+    new_approval_state,
+    reopen_framework,
+)
 
 CUSTOM_CSS = """
 footer, .footer { display: none !important; }
@@ -62,6 +76,31 @@ OVERVIEW_INTRO_MD = (
     "score, weighting, or recommendation."
 )
 
+SETUP_INTRO_MD = (
+    "Define the evaluation framework — criteria, weights, mandatory "
+    "requirements and scoring mode — before proposals are compared. "
+    "Approving the framework locks it; reopening it requires a logged reason."
+)
+
+SETUP_SCORING_MODE_MD = (
+    "**Panel + Consensus** (shipped default) — each evaluator scores every "
+    "criterion individually; divergence between evaluators is surfaced and "
+    "a consensus score is recorded by the panel with a rationale.\n\n"
+    "**Traditional weighted** — criteria carry a percentage weight, in line "
+    "with common procurement practice, for a weighted total per vendor.\n\n"
+    "In both modes the tool never auto-declares a winner: a recommended "
+    "supplier is always a separate, deliberate action taken by the "
+    "evaluation panel, not an output of this selector. The weighted-totals "
+    "view in Compare is not built yet — this selector configures the "
+    "evaluation framework only."
+)
+
+SETUP_GATES_INTRO_MD = (
+    "Requirements defined here sit outside scoring entirely and are "
+    "evaluated per vendor in the Compare tab — a failed mandatory "
+    "requirement can never be offset by a good score elsewhere."
+)
+
 # Presentation-only status -> (background, text) colour mapping for the
 # Overview status chips. Deliberately muted; no business logic lives here.
 _OVERVIEW_STATUS_COLORS = {
@@ -87,19 +126,6 @@ def _overview_table_rows(statuses):
         [s["stage"], _overview_status_chip(s["status"]), s["next_action"]]
         for s in statuses
     ]
-
-
-def refresh_overview(capability_grid, viability_grid):
-    """Refresh the Overview tab's workflow status table.
-
-    Thin wiring: fetches the persisted intake log (degrading to [] if
-    HF_TOKEN is absent or the fetch fails, same as the Intake tab's saved
-    log viewer) and defers all status logic to
-    app.logic.overview.stage_statuses.
-    """
-    intake_rows, _log_status = load_intake_log()
-    statuses = stage_statuses(intake_rows, capability_grid, viability_grid)
-    return _overview_table_rows(statuses)
 
 
 def load_blank():
@@ -165,6 +191,99 @@ def save_intake(
     return "\n".join(lines)
 
 
+def _blank(value):
+    text = str(value).strip() if value is not None else ""
+    return text if text else "— not provided —"
+
+
+def refresh_setup_procurement_summary(
+    project_name,
+    requester_role,
+    business_area,
+    problem_statement,
+    desired_decision_date,
+):
+    """Thin restating of the Intake tab's own fields — no computation."""
+    lines = [
+        "### Procurement summary (from Intake)",
+        "",
+        f"- **Project / sourcing name:** {_blank(project_name)}",
+        f"- **Requester role:** {_blank(requester_role)}",
+        f"- **Business area:** {_blank(business_area)}",
+        f"- **Problem statement:** {_blank(problem_statement)}",
+        f"- **Desired decision date:** {_blank(desired_decision_date)}",
+    ]
+    return "\n".join(lines)
+
+
+def _criteria_table_to_dicts(criteria_table):
+    """Reshape a gr.Dataframe value (ID, Domain, Statement, Weight rows) into
+    the plain dicts app.logic.setup.check_weights() expects. Data marshaling
+    only — no validation logic lives here."""
+    rows = criteria_table.values.tolist() if hasattr(criteria_table, "values") else criteria_table
+    criteria = []
+    for row in rows:
+        row = list(row) + [None] * 4
+        cid, domain, statement, weight = row[:4]
+        try:
+            weight_val = float(weight) if weight not in (None, "") else None
+        except (TypeError, ValueError):
+            weight_val = None
+        criteria.append(
+            {"id": cid, "domain": domain, "statement": statement, "weight": weight_val}
+        )
+    return criteria
+
+
+def check_setup_weights(criteria_table):
+    warning = check_weights(_criteria_table_to_dicts(criteria_table))
+    return warning or "OK — weights sum to 100."
+
+
+def on_approve_setup_framework(state, note):
+    new_state, message = approve_framework(state, note)
+    locked = is_locked(new_state)
+    return (
+        new_state,
+        message,
+        format_approval_log(new_state),
+        gr.update(interactive=not locked),
+        gr.update(interactive=not locked),
+        gr.update(interactive=not locked),
+    )
+
+
+def on_reopen_setup_framework(state, reason):
+    new_state, message = reopen_framework(state, reason)
+    locked = is_locked(new_state)
+    return (
+        new_state,
+        message,
+        format_approval_log(new_state),
+        gr.update(interactive=not locked),
+        gr.update(interactive=not locked),
+        gr.update(interactive=not locked),
+    )
+
+
+def refresh_overview(capability_grid, viability_grid, setup_approval_state=None):
+    """Refresh the Overview tab's workflow status table.
+
+    Thin wiring: fetches the persisted intake log (degrading to [] if
+    HF_TOKEN is absent or the fetch fails, same as the Intake tab's saved
+    log viewer) and defers all status logic to
+    app.logic.overview.stage_statuses.
+    """
+    intake_rows, _log_status = load_intake_log()
+    statuses = stage_statuses(
+        intake_rows,
+        capability_grid,
+        viability_grid,
+        setup_approval_state=setup_approval_state,
+    )
+    return _overview_table_rows(statuses)
+
+
 def build_app():
     with gr.Blocks(title="RFP Evaluation Tool — MVP-0") as demo:
         gr.Markdown("# Make the right sourcing call before the RFP starts.")
@@ -187,6 +306,7 @@ def build_app():
                             intake_log_rows=[],
                             capability_grid=blank_capability_matrix(),
                             viability_grid=blank_viability_gate(),
+                            setup_approval_state=new_approval_state(),
                         )
                     ),
                     datatype=["str", "html", "str"],
@@ -298,11 +418,125 @@ def build_app():
                 readout_btn = gr.Button("Generate readout", variant="primary")
                 readout_md = gr.Markdown("")
 
-            with gr.TabItem("5. Validation"):
+            with gr.TabItem("5. Setup"):
+                gr.Markdown("### Evaluation framework setup")
+                gr.Markdown(SETUP_INTRO_MD)
+
+                gr.Markdown("#### Procurement summary")
+                gr.Markdown(
+                    "_Restates the Intake tab's own fields — nothing is computed "
+                    "or inferred here._"
+                )
+                setup_refresh_procurement_btn = gr.Button("Refresh from Intake")
+                setup_procurement_summary_md = gr.Markdown(
+                    refresh_setup_procurement_summary("", "", "", "", "")
+                )
+
+                gr.Markdown("#### Evaluation team")
+                gr.Dataframe(
+                    headers=["Role", "Name", "Title"],
+                    value=[
+                        [role, info["name"], info["title"]]
+                        for role, info in EVALUATION_TEAM.items()
+                    ],
+                    interactive=False,
+                    row_count=(len(EVALUATION_TEAM), "fixed"),
+                    column_count=(3, "fixed"),
+                    label="Evaluation panel",
+                )
+
+                gr.Markdown("#### Mandatory requirements")
+                gr.Markdown(SETUP_GATES_INTRO_MD)
+                gr.Dataframe(
+                    headers=["Gate ID", "Requirement"],
+                    value=[[g["id"], g["statement"]] for g in GATES],
+                    interactive=False,
+                    row_count=(len(GATES), "fixed"),
+                    column_count=(2, "fixed"),
+                    label="Mandatory requirements (gates)",
+                )
+
+                gr.Markdown("#### Scoring mode")
+                gr.Markdown(SETUP_SCORING_MODE_MD)
+                setup_scoring_mode_radio = gr.Radio(
+                    SCORING_MODES,
+                    value=DEFAULT_SCORING_MODE,
+                    label="Scoring mode",
+                )
+                setup_weight_editor_df = gr.Dataframe(
+                    headers=["ID", "Weight"],
+                    value=[[c["id"], c["weight"]] for c in CRITERIA],
+                    datatype=["str", "number"],
+                    interactive=False,
+                    row_count=(len(CRITERIA), "fixed"),
+                    column_count=(2, "fixed"),
+                    visible=(DEFAULT_SCORING_MODE == "Traditional weighted"),
+                    label="Weights (Traditional weighted mode)",
+                )
+
+                gr.Markdown("#### Criteria and weights")
+                setup_criteria_df = gr.Dataframe(
+                    headers=["ID", "Domain", "Statement", "Weight"],
+                    value=[
+                        [c["id"], c["domain"], c["statement"], c["weight"]]
+                        for c in CRITERIA
+                    ],
+                    datatype=["str", "str", "str", "number"],
+                    interactive=True,
+                    wrap=True,
+                    row_count=(len(CRITERIA), "fixed"),
+                    column_count=(4, "fixed"),
+                    label="Criteria and weights",
+                )
+                setup_check_weights_btn = gr.Button("Check weights")
+                setup_weight_check_md = gr.Markdown("")
+
+                gr.Markdown("#### Scoring scale")
+                gr.Dataframe(
+                    headers=["Score", "Description"],
+                    value=[[str(k), v] for k, v in sorted(SCORING_SCALE.items())],
+                    interactive=False,
+                    row_count=(len(SCORING_SCALE), "fixed"),
+                    column_count=(2, "fixed"),
+                    label="Scoring scale anchors",
+                )
+
+                gr.Markdown("#### Shortlist rule")
+                setup_shortlist_tb = gr.Textbox(
+                    value=SHORTLIST_RULE,
+                    lines=4,
+                    label="Shortlist rule (part of the framework being approved)",
+                )
+
+                gr.Markdown("#### Approval")
+                gr.Markdown(
+                    "_Approving locks criteria, weights, the shortlist rule and "
+                    "scoring mode. Reopening requires a logged reason — this is "
+                    "a session-only lock, not a persisted record._"
+                )
+                setup_approval_state = gr.State(new_approval_state())
+                setup_approve_note_tb = gr.Textbox(
+                    label="Approval note (optional)", lines=1
+                )
+                setup_approve_btn = gr.Button(
+                    "Approve evaluation framework", variant="primary"
+                )
+                setup_approval_status_md = gr.Markdown("")
+
+                setup_reopen_reason_tb = gr.Textbox(
+                    label="Reason for reopening (required)", lines=1
+                )
+                setup_reopen_btn = gr.Button("Reopen framework")
+
+                setup_approval_log_md = gr.Markdown(
+                    format_approval_log(new_approval_state())
+                )
+
+            with gr.TabItem("6. Validation"):
                 gr.Markdown("### Validation questions for testers")
                 gr.Markdown(VALIDATION_QUESTIONS_MD)
 
-            with gr.TabItem("6. Compare (preview)"):
+            with gr.TabItem("7. Compare (preview)"):
                 gr.Markdown("### Side-by-side vendor comparison")
                 gr.Markdown(
                     "_Preview with sample data: two mock proposals against the "
@@ -360,8 +594,10 @@ def build_app():
                 consensus_log_md = gr.Markdown(format_consensus_log([]))
 
         refresh_overview_btn.click(
-            lambda cap, via: refresh_overview(cap.values.tolist(), via.values.tolist()),
-            inputs=[capability_df, viability_df],
+            lambda cap, via, setup_state: refresh_overview(
+                cap.values.tolist(), via.values.tolist(), setup_state
+            ),
+            inputs=[capability_df, viability_df, setup_approval_state],
             outputs=overview_df,
         )
 
@@ -397,6 +633,51 @@ def build_app():
             lambda cap, via: generate_readout(cap.values.tolist(), via.values.tolist()),
             inputs=[capability_df, viability_df],
             outputs=readout_md,
+        )
+
+        setup_refresh_procurement_btn.click(
+            refresh_setup_procurement_summary,
+            inputs=[
+                project_name,
+                requester_role,
+                business_area,
+                problem_statement,
+                desired_decision_date,
+            ],
+            outputs=setup_procurement_summary_md,
+        )
+
+        setup_scoring_mode_radio.change(
+            lambda mode: gr.update(visible=(mode == "Traditional weighted")),
+            inputs=setup_scoring_mode_radio,
+            outputs=setup_weight_editor_df,
+        )
+
+        setup_check_weights_btn.click(
+            check_setup_weights,
+            inputs=setup_criteria_df,
+            outputs=setup_weight_check_md,
+        )
+
+        setup_lock_outputs = [
+            setup_approval_state,
+            setup_approval_status_md,
+            setup_approval_log_md,
+            setup_criteria_df,
+            setup_shortlist_tb,
+            setup_scoring_mode_radio,
+        ]
+
+        setup_approve_btn.click(
+            on_approve_setup_framework,
+            inputs=[setup_approval_state, setup_approve_note_tb],
+            outputs=setup_lock_outputs,
+        )
+
+        setup_reopen_btn.click(
+            on_reopen_setup_framework,
+            inputs=[setup_approval_state, setup_reopen_reason_tb],
+            outputs=setup_lock_outputs,
         )
 
         domain_dd.change(

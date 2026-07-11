@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.logic.overview import STAGES, STATUSES, format_overview, stage_statuses
+from app.logic.setup import approve_framework, new_approval_state, reopen_framework
 
 
 def _by_stage(statuses):
@@ -91,6 +92,49 @@ def test_all_statuses_are_from_the_vocabulary():
     statuses = stage_statuses(intake_log_rows=[["r"]], capability_grid=capability_grid, viability_grid=viability_grid)
     for s in statuses:
         assert s["status"] in STATUSES
+
+
+def test_stage_statuses_without_setup_arg_is_backward_compatible():
+    # Existing callers that don't pass setup_approval_state must behave
+    # exactly as before this parameter existed.
+    statuses = _by_stage(
+        stage_statuses(intake_log_rows=[], capability_grid=[], viability_grid=[])
+    )
+    assert statuses["Setup"]["status"] == "Not started"
+    assert statuses["Setup"]["next_action"]
+
+
+def test_setup_status_never_started_is_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            setup_approval_state=new_approval_state(),
+        )
+    )
+    assert statuses["Setup"]["status"] == "Not started"
+
+
+def test_setup_status_approved_is_complete():
+    state, _ = approve_framework(new_approval_state(), note="Panel sign-off.")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            setup_approval_state=state,
+        )
+    )
+    assert statuses["Setup"]["status"] == "Complete"
+
+
+def test_setup_status_reopened_needs_attention():
+    state, _ = approve_framework(new_approval_state(), note="Panel sign-off.")
+    reopened, _ = reopen_framework(state, "Procurement asked for a new mandatory gate.")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            setup_approval_state=reopened,
+        )
+    )
+    assert statuses["Setup"]["status"] == "Needs attention"
 
 
 def test_format_overview_renders_a_table():
