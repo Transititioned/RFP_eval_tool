@@ -31,6 +31,12 @@ Decision:
   procurement is often a gatekeeper on RFP processes and traditional
   scoring is what their governance expects.
 
+*Shipped note (2026-07-11, later the same day): the mode selector and
+weights landed in the Setup tab, and the weighted totals/ranking landed
+on the Shortlist tab (consumed by Recommendation) — the Compare view
+this entry references was restructured into the Evaluation tab. The
+decision itself is unchanged.*
+
 ## 2026-07-10 — Scoring model: panel scores + moderated consensus
 
 How real RFP evaluations work, and what the product models:

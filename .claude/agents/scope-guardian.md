@@ -27,13 +27,16 @@ that before it lands.
      multi-tenant workspaces.
    - Auto-declared winners — per the 2026-07-11 decision in
      docs/product_decisions.md, computed scores/rankings (panel totals,
-     traditional weighted totals) are permitted within Compare, but the
-     tool must never auto-declare a winner or auto-render a "Recommended
-     supplier" from a top-ranked total — that must always be a separate,
-     deliberate, human-entered action. Flag anything that computes scores
-     or roll-ups outside Compare, or anything anywhere (including helpers
-     and display formatters) that turns a computed total into an asserted
-     winner or recommendation on its own.
+     consensus rankings, traditional weighted totals) are permitted
+     within the Evaluation, Shortlist and Recommendation tabs, but the
+     tool must never auto-declare a winner, auto-shortlist a top-ranked
+     vendor, or auto-render a "Recommended supplier" from a top-ranked
+     total — those must always be separate, deliberate, human-entered
+     actions (shortlist divergence and recommendations require written
+     reasons). Flag anything that computes scores or roll-ups outside
+     those tabs, or anything anywhere (including helpers and display
+     formatters) that turns a computed total into an asserted winner,
+     shortlist entry, or recommendation on its own.
 4. Check the two exceptions carved out of that list, and make sure the diff
    respects their narrow boundaries rather than treating them as blanket
    permission:

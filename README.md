@@ -28,8 +28,8 @@ contract** — features are prioritised by value, not by the plan's order.
 
 ## What the app does today
 
-The app opens into a guided ten-tab workflow. Each tab also stands alone —
-you don't have to complete earlier tabs to use a later one.
+The app opens into a guided twelve-tab workflow. Each tab also stands
+alone — you don't have to complete earlier tabs to use a later one.
 
 1. **Overview** — workflow status at a glance: one row per stage (Intake,
    Options, Assessment Detail, Readout, Setup, Proposals, Eligibility,
@@ -38,9 +38,9 @@ you don't have to complete earlier tabs to use a later one.
    Complete) and a short next-recommended-action line. Statuses are
    computed honestly from real state (the saved intake log, the current
    grid values, the Setup approval state, the proposal-set confirmation,
-   recorded eligibility outcomes); stages not yet built always show "Not
-   started". A "Refresh status" button re-checks. No scores or completion
-   percentages.
+   recorded eligibility outcomes, recorded consensus, and the shortlist
+   and recommendation decisions). A "Refresh status" button re-checks. No
+   scores or completion percentages on this tab.
 2. **Intake** — sourcing request fields (project name, requester role,
    business area, problem statement, why now, primary capability, decision
    date, budget/compliance/incumbent/licence flags). "Save intake /
@@ -91,37 +91,52 @@ you don't have to complete earlier tabs to use a later one.
    disappearing. Outcomes sit outside scoring: an exclusion is never
    offset by good scores, and the tool never derives an outcome from the
    compliance table on its own.
-9. **Validation** — the five standing questions for anyone testing the
+9. **Evaluation** — the product's central experience (formerly the
+   Compare tab): a landing dashboard plus three working views, previewed
+   against the sample vendor proposals:
+   - **Landing** — evaluation completeness at a glance: progress %
+     (process telemetry, not a vendor score), evaluators complete,
+     criteria complete, open clarifications, and material score
+     variances.
+   - **Evaluate** — a single evaluator's scores per criterion per vendor
+     (read-only sample view).
+   - **Compare** — the side-by-side grid: mandatory gates shown
+     separately from scoring (a gate failure can never be offset by a
+     good score elsewhere); criterion-by-criterion comparison filterable
+     by architecture domain, with evidence reference and confidence per
+     response; unanswered criteria shown as `NOT ANSWERED`, not hidden.
+   - **Moderate** — the workshop focus queue (gate failures → unanswered
+     criteria → high score spread → low-confidence evidence) and
+     consensus recording: a human enters a consensus score with a
+     required rationale — it won't save without one; individual scores
+     are preserved unchanged alongside every consensus decision.
+10. **Shortlist** — a computed, mode-aware ranking (consensus totals or
+   weighted totals, per the Setup scoring mode) shown side by side with a
+   separate human shortlist decision. Weighted totals always show their
+   coverage (how many criteria came from consensus, panel means, or are
+   unscored) with a caution when provisional. Proposing a shortlist that
+   differs from the computed ranking — including by order — **requires a
+   written reason**; approval records who approved and when; changing an
+   approved shortlist clears the approval with a logged event. The tool
+   never auto-shortlists the top-ranked supplier.
+11. **Recommendation** — four explicitly separate fields: Highest-scoring
+   supplier (computed, shown as data only), and Preferred, Recommended,
+   and Approved supplier (all human-entered; each can differ from the
+   others and from the highest score). Recording a recommendation
+   **requires written reasons**; risks, conditions/negotiation items, and
+   dissenting views are captured as free text. No export or report
+   builder.
+12. **Validation** — the five standing questions for anyone testing the
    tool (below).
-10. **Compare (preview)** — side-by-side vendor comparison, the product's
-   central experience, previewed against two sample vendor proposals:
-   - **Mandatory gates** shown separately from scoring (data residency,
-     data export, audit logging) — a gate failure can never be offset by
-     a good score elsewhere.
-   - **Criterion-by-criterion comparison**, filterable by architecture
-     domain, with an evidence reference and confidence level per response.
-     Unanswered criteria are shown as `NOT ANSWERED`, not hidden.
-   - **Individual panel scores** (Business Rep / Architect / Tech PM),
-     0–5 per criterion per vendor, with score-spread flagged when
-     evaluators diverge.
-   - **Workshop focus queue**, auto-prioritised: gate failures →
-     unanswered criteria → high score spread → low-confidence evidence.
-   - **Consensus recording**: a human enters a consensus score with a
-     required rationale — it won't save without one. Individual scores
-     are preserved unchanged alongside every consensus decision. The tool
-     never computes or asserts a blended "winner."
 
 ## Scoring model
 
-Two scoring modes, both bound by the same rule: the tool may compute and
-display a score or ranking, but never auto-declares a winner. **Panel +
-Consensus is shipped and the default today.** Traditional weighted was
-decided on 2026-07-11; its framework configuration (mode selector,
-per-criterion weights, weights-sum check) ships in the Setup tab, but
-the weighted-totals view in Compare is **not yet built** — Compare
-currently only offers Panel + Consensus.
+Two scoring modes, both shipped, both bound by the same rule: the tool
+may compute and display a score or ranking, but never auto-declares a
+winner. The mode is chosen (and locked by approval) in Setup, and it
+determines the ranking shown on the Shortlist and Recommendation tabs.
 
-**Panel + Consensus (default, shipped)** — modelled on how real evaluation
+**Panel + Consensus (default)** — modelled on how real evaluation
 panels work, not on an aggregate formula:
 
 - Each evaluator (Business Rep, Architecture, Tech PM, etc.) scores
@@ -130,14 +145,25 @@ panels work, not on an aggregate formula:
   workshop focus queue.
 - Consensus is reached by humans in the evaluation meeting and recorded
   with a rationale — it is a decision, not a computed average.
+- Its ranking is the sum of recorded consensus scores per vendor; with no
+  consensus recorded yet, the tool says so rather than inventing one.
 
-**Traditional weighted (configuration shipped in Setup; Compare view not
-yet built)** — the procurement-standard model many governance processes
-require and can defend to auditors:
+**Traditional weighted** — the procurement-standard model many governance
+processes require and can defend to auditors:
 
-- Criteria x weight -> total per vendor, displayed and sortable.
+- Criteria x weight -> total per vendor, displayed and sortable. Each
+  criterion uses its recorded consensus score where one exists, otherwise
+  the mean of the individual panel scores; unscored criteria are counted
+  and disclosed so a partial total is always visibly provisional.
 - The total is a computed number, not a decision — "Recommended
   supplier" still requires a separate human action with rationale.
+
+How Shortlist and Recommendation use the ranking: the ranking is data.
+The shortlist is a separate human proposal (a divergence from the
+computed ranking requires a written reason), and the recommendation
+keeps Highest-scoring / Preferred / Recommended / Approved supplier as
+four distinct fields — the tool never converts a top rank into a
+shortlist entry or a recommendation on its own.
 
 Shared across both modes:
 
@@ -189,12 +215,14 @@ and the Intake tab says so; the rest of the app still works.
 - `app/logic/setup.py` — evaluation-framework approval lock and weights-sum check
 - `app/logic/proposals.py` — proposal-set confirm/reopen state machine and readiness rows
 - `app/logic/eligibility.py` — vendor eligibility outcomes (exclusion requires a reason)
+- `app/logic/shortlist.py` — shortlist proposal/approval state machine (divergence from the computed ranking requires a reason)
+- `app/logic/recommendation.py` — recommendation state machine (recommended supplier requires written reasons)
 - `app/logic/readout.py` — plain-English readout generation
 - `app/logic/comparison.py` — comparison rows, score spread, focus queue, consensus recording
 - `app/logic/persistence.py` — appends intake records to a private HF Dataset repo
-- `app/ui/gradio_app.py` — Gradio UI (ten-tab workflow shell)
+- `app/ui/gradio_app.py` — Gradio UI (twelve-tab workflow shell)
 - `docs/` — product brief, product decisions, backlog, validation test script
-- `tests/` — unit tests for readout, comparison, overview, setup, proposals, and eligibility logic
+- `tests/` — unit tests for readout, comparison, overview, setup, proposals, eligibility, shortlist, and recommendation logic
 
 ## Validation questions for testers
 

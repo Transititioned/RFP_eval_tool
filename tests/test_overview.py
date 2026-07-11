@@ -3,10 +3,17 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.logic.comparison import record_consensus
 from app.logic.eligibility import new_eligibility_state, record_eligibility
 from app.logic.overview import STAGES, STATUSES, format_overview, stage_statuses
 from app.logic.proposals import confirm_proposal_set, new_proposal_state, reopen_proposal_set
+from app.logic.recommendation import (
+    approve_recommendation,
+    new_recommendation_state,
+    record_recommendation,
+)
 from app.logic.setup import approve_framework, new_approval_state, reopen_framework
+from app.logic.shortlist import approve_shortlist, new_shortlist_state, propose_shortlist
 
 VENDORS = ["Acme CaseWorks", "NovaAI FlowSuite", "Titan Public Sector Suite"]
 
@@ -265,6 +272,159 @@ def test_eligibility_status_excluded_vendor_still_counts_toward_assessed():
         )
     )
     assert statuses["Eligibility"]["status"] == "Complete"
+
+
+def test_stage_statuses_without_evaluation_shortlist_recommendation_args_is_backward_compatible():
+    statuses = _by_stage(
+        stage_statuses(intake_log_rows=[], capability_grid=[], viability_grid=[])
+    )
+    assert statuses["Evaluation"]["status"] == "Not started"
+    assert statuses["Evaluation"]["next_action"]
+    assert statuses["Shortlist"]["status"] == "Not started"
+    assert statuses["Shortlist"]["next_action"]
+    assert statuses["Recommendation"]["status"] == "Not started"
+    assert statuses["Recommendation"]["next_action"]
+
+
+def test_evaluation_status_empty_consensus_log_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            consensus_log=[],
+        )
+    )
+    assert statuses["Evaluation"]["status"] == "Not started"
+
+
+def test_evaluation_status_recorded_consensus_in_progress():
+    log, _ = record_consensus([], "APP-01", "Acme CaseWorks", 4, "Panel agreed on evidence.")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            consensus_log=log,
+        )
+    )
+    assert statuses["Evaluation"]["status"] == "In progress"
+
+
+def test_evaluation_status_never_fabricated_from_sample_panel_scores():
+    # Sanity: stage_statuses()/evaluation_status() must derive Evaluation
+    # status purely from the consensus_log argument, never by importing the
+    # sample PANEL_SCORES data (mentions in comments/docstrings explaining
+    # this constraint are fine — an actual import is not).
+    import app.logic.overview as overview_module
+
+    assert not hasattr(overview_module, "PANEL_SCORES")
+    source = open(overview_module.__file__, encoding="utf-8").read()
+    assert "import PANEL_SCORES" not in source
+    assert "from app.data" not in source
+    assert "import app.data" not in source
+
+
+def test_shortlist_status_no_events_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            shortlist_state=new_shortlist_state(),
+        )
+    )
+    assert statuses["Shortlist"]["status"] == "Not started"
+
+
+def test_shortlist_status_proposed_not_approved_in_progress():
+    state, _ = propose_shortlist(new_shortlist_state(), ["Acme CaseWorks"], ["Acme CaseWorks"])
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            shortlist_state=state,
+        )
+    )
+    assert statuses["Shortlist"]["status"] == "In progress"
+
+
+def test_shortlist_status_approved_complete():
+    state, _ = propose_shortlist(new_shortlist_state(), ["Acme CaseWorks"], ["Acme CaseWorks"])
+    state, _ = approve_shortlist(state, "Priya Chandrasekaran")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            shortlist_state=state,
+        )
+    )
+    assert statuses["Shortlist"]["status"] == "Complete"
+
+
+def test_shortlist_status_reproposed_after_approval_needs_attention():
+    state, _ = propose_shortlist(new_shortlist_state(), ["Acme CaseWorks"], ["Acme CaseWorks"])
+    state, _ = approve_shortlist(state, "Priya Chandrasekaran")
+    state, _ = propose_shortlist(
+        state, ["NovaAI FlowSuite"], ["Acme CaseWorks"], reason="New evidence changed the panel's view."
+    )
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            shortlist_state=state,
+        )
+    )
+    assert statuses["Shortlist"]["status"] == "Needs attention"
+
+
+def test_recommendation_status_no_events_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            recommendation_state=new_recommendation_state(),
+        )
+    )
+    assert statuses["Recommendation"]["status"] == "Not started"
+
+
+def test_recommendation_status_recorded_not_approved_in_progress():
+    state, _ = record_recommendation(
+        new_recommendation_state(), "Acme CaseWorks", "Acme CaseWorks",
+        "Strong evidenced coverage.",
+    )
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            recommendation_state=state,
+        )
+    )
+    assert statuses["Recommendation"]["status"] == "In progress"
+
+
+def test_recommendation_status_approved_complete():
+    state, _ = record_recommendation(
+        new_recommendation_state(), "Acme CaseWorks", "Acme CaseWorks",
+        "Strong evidenced coverage.",
+    )
+    state, _ = approve_recommendation(state, "Fiona Nakamura-Blake")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            recommendation_state=state,
+        )
+    )
+    assert statuses["Recommendation"]["status"] == "Complete"
+
+
+def test_recommendation_status_re_recorded_after_approval_needs_attention():
+    state, _ = record_recommendation(
+        new_recommendation_state(), "Acme CaseWorks", "Acme CaseWorks",
+        "Strong evidenced coverage.",
+    )
+    state, _ = approve_recommendation(state, "Fiona Nakamura-Blake")
+    state, _ = record_recommendation(
+        state, "Acme CaseWorks", "Titan Public Sector Suite",
+        "New DR evidence changed the panel's view.",
+    )
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            recommendation_state=state,
+        )
+    )
+    assert statuses["Recommendation"]["status"] == "Needs attention"
 
 
 if __name__ == "__main__":

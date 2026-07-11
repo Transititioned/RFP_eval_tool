@@ -19,9 +19,12 @@ from app.data.comparison_sample import (
     ELIGIBILITY_COMPLIANCE,
     ELIGIBILITY_OUTCOMES,
     EVALUATION_TEAM,
+    EVALUATORS,
     GATES,
+    PANEL_SCORES,
     PROPOSAL_READINESS,
     PROPOSAL_STATUSES,
+    RESPONSES,
     SCORE_SCALE,
     SCORING_MODES,
     SCORING_SCALE,
@@ -30,11 +33,14 @@ from app.data.comparison_sample import (
 )
 from app.logic.comparison import (
     comparison_rows,
+    consensus_ranking,
+    evaluation_progress,
     format_consensus_log,
     format_criterion_detail,
     format_focus_queue,
     gate_rows,
     record_consensus,
+    weighted_totals,
 )
 from app.logic.eligibility import (
     compliance_rows,
@@ -55,6 +61,13 @@ from app.logic.proposals import (
     reopen_proposal_set,
 )
 from app.logic.readout import generate_readout
+from app.logic.recommendation import (
+    approve_recommendation,
+    current_recommendation,
+    format_recommendation_log,
+    new_recommendation_state,
+    record_recommendation,
+)
 from app.logic.setup import (
     approve_framework,
     check_weights,
@@ -62,6 +75,13 @@ from app.logic.setup import (
     is_locked,
     new_approval_state,
     reopen_framework,
+)
+from app.logic.shortlist import (
+    approve_shortlist,
+    current_shortlist,
+    format_shortlist_log,
+    new_shortlist_state,
+    propose_shortlist,
 )
 
 CUSTOM_CSS = """
@@ -80,6 +100,8 @@ DEFAULT_OPTION_NAMES = [
     "Shiny AI product",
     "Hybrid/composite option",
 ]
+
+RECOMMENDATION_VENDOR_CHOICES = [""] + VENDORS
 
 VALIDATION_QUESTIONS_MD = (
     "1. Did any gate feel like you had already answered it in the matrix?\n"
@@ -109,14 +131,15 @@ SETUP_SCORING_MODE_MD = (
     "with common procurement practice, for a weighted total per vendor.\n\n"
     "In both modes the tool never auto-declares a winner: a recommended "
     "supplier is always a separate, deliberate action taken by the "
-    "evaluation panel, not an output of this selector. The weighted-totals "
-    "view in Compare is not built yet — this selector configures the "
-    "evaluation framework only."
+    "evaluation panel, not an output of this selector. This selector "
+    "configures the evaluation framework; the Shortlist and Recommendation "
+    "tabs read whichever mode is selected here to display the computed "
+    "ranking."
 )
 
 SETUP_GATES_INTRO_MD = (
     "Requirements defined here sit outside scoring entirely and are "
-    "evaluated per vendor in the Compare tab — a failed mandatory "
+    "evaluated per vendor in the Evaluation tab — a failed mandatory "
     "requirement can never be offset by a good score elsewhere."
 )
 
@@ -134,6 +157,64 @@ ELIGIBILITY_INTRO_MD = (
     "never offset by a good score elsewhere. The compliance table below is "
     "sample data — outcomes are always recorded as a deliberate human "
     "action, never derived from it automatically."
+)
+
+EVALUATION_INTRO_MD = (
+    "Vendor proposals are scored against the approved criteria and "
+    "mandatory gates here. Evaluators score independently; divergence "
+    "between them is a primary signal, and consensus is a separate human "
+    "decision recorded with a rationale. The tool never computes or "
+    "asserts a blended winner."
+)
+
+EVALUATION_LANDING_GUIDANCE_MD = (
+    "- **Evaluate** — review sample panel scores for one evaluator, "
+    "criterion by criterion.\n"
+    "- **Compare** — the side-by-side vendor comparison, filtered by "
+    "architecture domain, alongside the mandatory gates.\n"
+    "- **Moderate** — work the workshop focus queue and record consensus "
+    "decisions."
+)
+
+EVALUATION_EVALUATE_INTRO_MD = (
+    "Sample panel scores for the selected evaluator, one row per "
+    "criterion. This is a read-only preview of recorded panel data — "
+    "score entry here does not yet persist changes."
+)
+
+EVALUATION_COMPARE_INTRO_MD = (
+    "Preview with sample data: three mock proposals against the "
+    "customer/case scenario. Panel members score individually; consensus "
+    "is reached in the evaluation workshop and recorded with a rationale. "
+    "The tool never computes a blended winner."
+)
+
+SHORTLIST_INTRO_MD = (
+    "The ranking below is computed data, produced under whichever scoring "
+    "mode is selected in Setup. It never determines the shortlist by "
+    "itself — shortlisting is a separate, recorded human decision made by "
+    "the evaluation panel, and the tool never proposes or approves a "
+    "shortlist automatically."
+)
+
+SHORTLIST_PROPOSAL_REASON_HELP = (
+    "Required if your proposed shortlist differs from the computed "
+    "ranking — including if only the order differs."
+)
+
+RECOMMENDATION_INTRO_MD = (
+    "Four distinct fields are tracked here and never merged into one "
+    "another:\n\n"
+    "- **Highest-scoring supplier** — computed from the active scoring "
+    "mode's ranking; this is data, not a decision.\n"
+    "- **Preferred supplier** — an individual evaluator's read, which may "
+    "differ from the eventual recommendation.\n"
+    "- **Recommended supplier** — the evaluation panel's actual decision, "
+    "which requires a written reason.\n"
+    "- **Approved supplier** — a separate sign-off action recording who "
+    "approved the recommendation and when.\n\n"
+    "Each of these may differ from the others and from the highest-scoring "
+    "supplier — the tool never substitutes one for another."
 )
 
 # Presentation-only status -> (background, text) colour mapping for the
@@ -307,6 +388,9 @@ def refresh_overview(
     setup_approval_state=None,
     proposals_state=None,
     eligibility_state=None,
+    consensus_log=None,
+    shortlist_state=None,
+    recommendation_state=None,
 ):
     """Refresh the Overview tab's workflow status table.
 
@@ -324,6 +408,9 @@ def refresh_overview(
         proposals_state=proposals_state,
         eligibility_state=eligibility_state,
         eligibility_vendors=VENDORS,
+        consensus_log=consensus_log,
+        shortlist_state=shortlist_state,
+        recommendation_state=recommendation_state,
     )
     return _overview_table_rows(statuses)
 
@@ -362,6 +449,222 @@ def on_record_eligibility(state, vendor, outcome, reason):
     )
 
 
+def _format_evaluation_progress_md(progress):
+    """Presentation-only rendering of evaluation_progress() output.
+
+    Restates the dict returned by app.logic.comparison.evaluation_progress()
+    as markdown — no score, weighting or ranking is computed here.
+    """
+    evaluators_complete = progress["evaluators_complete"]
+    criteria_complete = progress["criteria_complete"]
+    lines = [
+        "### Evaluation completeness (sample panel scores)",
+        "",
+        f"- **Progress:** {progress['filled_slots']} / {progress['total_slots']} "
+        f"scoring slots filled ({progress['percent_complete']}%)",
+        f"- **Evaluators complete:** {len(evaluators_complete)} / "
+        f"{progress['evaluators_total']}"
+        + (f" — {', '.join(evaluators_complete)}" if evaluators_complete else ""),
+        f"- **Criteria fully scored:** {len(criteria_complete)} / "
+        f"{progress['criteria_total']}"
+        + (f" — {', '.join(criteria_complete)}" if criteria_complete else ""),
+        f"- **Open clarifications:** {progress['open_clarifications']}",
+        f"- **Material score variances (spread ≥ 2):** {progress['material_variances']}",
+        "",
+        "_Process telemetry over the sample panel scores — not a vendor "
+        "score, ranking or aggregate._",
+    ]
+    return "\n".join(lines)
+
+
+def refresh_evaluation_progress():
+    progress = evaluation_progress(CRITERIA, VENDORS, PANEL_SCORES, RESPONSES, EVALUATORS)
+    return _format_evaluation_progress_md(progress)
+
+
+def evaluator_score_rows(evaluator):
+    """Read-only reshape of PANEL_SCORES for one evaluator.
+
+    Data selection only (no averaging, weighting or ranking) — there is no
+    equivalent app.logic function for this exact shape, and modifying
+    app/logic is out of scope for this pass, so the lookup lives here
+    alongside similar existing presentation helpers (e.g. _overview_table_rows).
+    """
+    rows = []
+    for criterion in CRITERIA:
+        row = [f"{criterion['id']} — {criterion['statement']}"]
+        for vendor in VENDORS:
+            scores = PANEL_SCORES.get((criterion["id"], vendor), {})
+            row.append(scores.get(evaluator, "—"))
+        rows.append(row)
+    return rows
+
+
+def _ranked_vendor_order(mode, consensus_log):
+    """Vendor names in ranked order under the given scoring mode.
+
+    Thin pass-through over app.logic.comparison's ranking functions — pulls
+    out just the "vendor" field in the order those functions already
+    computed. No scoring or ranking decisions are made here.
+    """
+    if mode == "Traditional weighted":
+        totals = weighted_totals(CRITERIA, VENDORS, PANEL_SCORES, consensus_log)
+        return [t["vendor"] for t in totals]
+    result = consensus_ranking(VENDORS, consensus_log)
+    return [r["vendor"] for r in result["ranking"]]
+
+
+def on_refresh_shortlist_ranking(mode, consensus_log):
+    if mode == "Traditional weighted":
+        totals = weighted_totals(CRITERIA, VENDORS, PANEL_SCORES, consensus_log)
+        rows = [
+            [t["vendor"], t["total"], t["n_consensus"], t["n_panel_mean"], t["n_unscored"]]
+            for t in totals
+        ]
+        cautions = [
+            f"- Totals are provisional: {t['n_unscored']} of {t['n_criteria']} "
+            f"criteria unscored for {t['vendor']}."
+            for t in totals
+            if t["n_unscored"] > 0
+        ]
+        caution_md = "\n".join(cautions) if cautions else "_All criteria scored for every vendor._"
+        mode_md = (
+            "**Ranking mode: Traditional weighted.** Totals are computed "
+            "data — never a declared winner."
+        )
+        return (
+            mode_md,
+            gr.update(value=rows, visible=True),
+            gr.update(visible=False),
+            caution_md,
+        )
+
+    result = consensus_ranking(VENDORS, consensus_log)
+    mode_md = "**Ranking mode: Panel + Consensus.**"
+    if result["message"]:
+        return mode_md, gr.update(visible=False), gr.update(value=[], visible=True), result["message"]
+
+    rows = [
+        [r["vendor"], r["total"], r["n_consensus"], r["n_criteria"]]
+        for r in result["ranking"]
+    ]
+    caution_md = (
+        "_\"Criteria with consensus\" counts distinct criteria with any "
+        "recorded consensus decision so far — not all criteria in the "
+        "framework._"
+    )
+    return (
+        mode_md,
+        gr.update(visible=False),
+        gr.update(value=rows, visible=True),
+        caution_md,
+    )
+
+
+def _parse_ranked_list(text):
+    return [v.strip() for v in (text or "").split(",") if v.strip()]
+
+
+def _format_current_shortlist_md(shortlist):
+    if not shortlist["vendors"]:
+        return "_No shortlist proposed yet._"
+    lines = [
+        "### Current shortlist",
+        "",
+        f"- **Vendors (proposed order):** {', '.join(shortlist['vendors'])}",
+        f"- **Matches computed ranking:** {'Yes' if shortlist['matched_mechanical'] else 'No'}",
+        f"- **Reason:** {shortlist['reason'] or '— none recorded —'}",
+        f"- **Approved:** {'Yes' if shortlist['approved'] else 'No'}",
+    ]
+    if shortlist["approved"]:
+        lines.append(f"- **Approved by:** {shortlist['approver']} at {shortlist['approved_at']}")
+    return "\n".join(lines)
+
+
+def on_propose_shortlist(state, proposal_text, reason, mode, consensus_log):
+    proposed = _parse_ranked_list(proposal_text)
+    mechanical_top = _ranked_vendor_order(mode, consensus_log)[: len(proposed)]
+    new_state, message = propose_shortlist(state, proposed, mechanical_top, reason)
+    return (
+        new_state,
+        message,
+        format_shortlist_log(new_state),
+        _format_current_shortlist_md(current_shortlist(new_state)),
+    )
+
+
+def on_approve_shortlist(state, approver_name):
+    new_state, message = approve_shortlist(state, approver_name)
+    return (
+        new_state,
+        message,
+        format_shortlist_log(new_state),
+        _format_current_shortlist_md(current_shortlist(new_state)),
+    )
+
+
+def on_refresh_highest_scoring(mode, consensus_log):
+    if mode == "Traditional weighted":
+        totals = weighted_totals(CRITERIA, VENDORS, PANEL_SCORES, consensus_log)
+        if not totals:
+            return "_Highest-scoring supplier: not available — no vendors configured._"
+        top = totals[0]
+        return (
+            f"**Highest-scoring supplier (Traditional weighted): {top['vendor']}** "
+            f"— weighted total {top['total']}. This is computed data, not a "
+            "recommendation."
+        )
+
+    result = consensus_ranking(VENDORS, consensus_log)
+    if result["message"]:
+        return "_Highest-scoring supplier (Panel + Consensus): not available — no consensus recorded._"
+    top = result["ranking"][0]
+    return (
+        f"**Highest-scoring supplier (Panel + Consensus): {top['vendor']}** "
+        f"— consensus total {top['total']}. This is computed data, not a "
+        "recommendation."
+    )
+
+
+def _format_current_recommendation_md(rec):
+    lines = [
+        "### Current recommendation",
+        "",
+        f"- **Preferred supplier:** {rec['preferred'] or '— none recorded —'}",
+        f"- **Recommended supplier:** {rec['recommended'] or '— none recorded —'}",
+        f"- **Reasons:** {rec['reasons'] or '— none recorded —'}",
+        f"- **Risks:** {rec['risks'] or '— none recorded —'}",
+        f"- **Conditions / negotiation items:** {rec['conditions'] or '— none recorded —'}",
+        f"- **Dissenting views:** {rec['dissent'] or '— none recorded —'}",
+        f"- **Approved:** {'Yes' if rec['approved'] else 'No'}",
+    ]
+    if rec["approved"]:
+        lines.append(f"- **Approved by:** {rec['approver']} at {rec['approved_at']}")
+    return "\n".join(lines)
+
+
+def on_record_recommendation(state, preferred, recommended, reasons, risks, conditions, dissent):
+    new_state, message = record_recommendation(
+        state, preferred, recommended, reasons, risks, conditions, dissent
+    )
+    return (
+        new_state,
+        message,
+        format_recommendation_log(new_state),
+        _format_current_recommendation_md(current_recommendation(new_state)),
+    )
+
+
+def on_approve_recommendation(state, approver_name):
+    new_state, message = approve_recommendation(state, approver_name)
+    return (
+        new_state,
+        message,
+        format_recommendation_log(new_state),
+        _format_current_recommendation_md(current_recommendation(new_state)),
+    )
+
+
 def build_app():
     with gr.Blocks(title="RFP Evaluation Tool — MVP-0") as demo:
         gr.Markdown("# Make the right sourcing call before the RFP starts.")
@@ -388,6 +691,9 @@ def build_app():
                             proposals_state=new_proposal_state(),
                             eligibility_state=new_eligibility_state(),
                             eligibility_vendors=VENDORS,
+                            consensus_log=[],
+                            shortlist_state=new_shortlist_state(),
+                            recommendation_state=new_recommendation_state(),
                         )
                     ),
                     datatype=["str", "html", "str"],
@@ -701,74 +1007,212 @@ def build_app():
                     format_eligibility_log(new_eligibility_state())
                 )
 
-            with gr.TabItem("8. Validation"):
+            with gr.TabItem("8. Evaluation"):
+                gr.Markdown("### Evaluation")
+                gr.Markdown(EVALUATION_INTRO_MD)
+
+                with gr.Tabs():
+                    with gr.TabItem("Landing"):
+                        gr.Markdown("#### Evaluation dashboard")
+                        eval_progress_refresh_btn = gr.Button("Refresh")
+                        eval_progress_md = gr.Markdown(
+                            _format_evaluation_progress_md(
+                                evaluation_progress(
+                                    CRITERIA, VENDORS, PANEL_SCORES, RESPONSES, EVALUATORS
+                                )
+                            )
+                        )
+                        gr.Markdown("#### Where to go next")
+                        gr.Markdown(EVALUATION_LANDING_GUIDANCE_MD)
+
+                    with gr.TabItem("Evaluate"):
+                        gr.Markdown(EVALUATION_EVALUATE_INTRO_MD)
+                        evaluator_dd = gr.Dropdown(
+                            EVALUATORS, value=EVALUATORS[0], label="Evaluator"
+                        )
+                        evaluator_scores_df = gr.Dataframe(
+                            headers=["Criterion"] + VENDORS,
+                            value=evaluator_score_rows(EVALUATORS[0]),
+                            interactive=False,
+                            wrap=True,
+                            label="Sample panel scores for this evaluator",
+                        )
+
+                    with gr.TabItem("Compare"):
+                        gr.Markdown(EVALUATION_COMPARE_INTRO_MD)
+
+                        gr.Markdown("#### Mandatory gates (cannot be offset by scores)")
+                        gr.Dataframe(
+                            headers=["Gate"] + VENDORS,
+                            value=gate_rows(),
+                            interactive=False,
+                            label="Mandatory gates",
+                        )
+
+                        gr.Markdown("#### Criterion comparison")
+                        domain_dd = gr.Dropdown(
+                            ARCHITECTURE_DOMAINS,
+                            value=ARCHITECTURE_DOMAINS[0],
+                            label="Architecture domain",
+                        )
+                        comparison_df = gr.Dataframe(
+                            headers=["Criterion"] + VENDORS,
+                            value=comparison_rows(ARCHITECTURE_DOMAINS[0]),
+                            interactive=False,
+                            wrap=True,
+                            label="Vendor responses (evidence-linked)",
+                        )
+
+                    with gr.TabItem("Moderate"):
+                        gr.Markdown("#### Workshop focus queue")
+                        focus_md = gr.Markdown(format_focus_queue())
+
+                        gr.Markdown("#### Criterion detail and workshop consensus")
+                        gr.Markdown(f"_Score scale: {SCORE_SCALE}._")
+                        criterion_dd = gr.Dropdown(
+                            [c["id"] for c in CRITERIA],
+                            value=CRITERIA[0]["id"],
+                            label="Criterion",
+                        )
+                        detail_md = gr.Markdown(format_criterion_detail(CRITERIA[0]["id"]))
+
+                        with gr.Row():
+                            consensus_vendor_dd = gr.Dropdown(VENDORS, label="Vendor")
+                            consensus_score_dd = gr.Dropdown(
+                                [0, 1, 2, 3, 4, 5], label="Consensus score"
+                            )
+                        consensus_rationale_tb = gr.Textbox(
+                            label="Consensus rationale (required)", lines=2
+                        )
+                        record_consensus_btn = gr.Button(
+                            "Record consensus", variant="primary"
+                        )
+                        consensus_status_md = gr.Markdown("")
+                        consensus_log_state = gr.State([])
+                        consensus_log_md = gr.Markdown(format_consensus_log([]))
+
+            with gr.TabItem("9. Shortlist"):
+                gr.Markdown("### Shortlist")
+                gr.Markdown(SHORTLIST_INTRO_MD)
+
+                gr.Markdown("#### Ranking (computed)")
+                shortlist_refresh_btn = gr.Button("Refresh ranking")
+                shortlist_mode_md = gr.Markdown("")
+                shortlist_weighted_df = gr.Dataframe(
+                    headers=[
+                        "Vendor",
+                        "Weighted total",
+                        "Via consensus",
+                        "Via panel mean",
+                        "Unscored",
+                    ],
+                    value=[],
+                    interactive=False,
+                    wrap=True,
+                    visible=(DEFAULT_SCORING_MODE == "Traditional weighted"),
+                    label="Traditional weighted totals",
+                )
+                shortlist_consensus_df = gr.Dataframe(
+                    headers=[
+                        "Vendor",
+                        "Consensus total",
+                        "Criteria scored (this vendor)",
+                        "Criteria with consensus",
+                    ],
+                    value=[],
+                    interactive=False,
+                    wrap=True,
+                    visible=(DEFAULT_SCORING_MODE == "Panel + Consensus"),
+                    label="Panel + Consensus ranking",
+                )
+                shortlist_caution_md = gr.Markdown("")
+
+                gr.Markdown("#### Proposal")
+                shortlist_proposal_tb = gr.Textbox(
+                    label="Proposed shortlist (comma-separated, ranked highest to lowest)",
+                    placeholder="e.g. Acme CaseWorks, Titan Public Sector Suite",
+                )
+                shortlist_reason_tb = gr.Textbox(
+                    label="Reason",
+                    lines=2,
+                    placeholder=SHORTLIST_PROPOSAL_REASON_HELP,
+                )
+                shortlist_propose_btn = gr.Button("Propose shortlist", variant="primary")
+                shortlist_propose_status_md = gr.Markdown("")
+
+                gr.Markdown("#### Approval")
+                shortlist_state = gr.State(new_shortlist_state())
+                shortlist_current_md = gr.Markdown(
+                    _format_current_shortlist_md(current_shortlist(new_shortlist_state()))
+                )
+                shortlist_approver_tb = gr.Textbox(label="Approver name")
+                shortlist_approve_btn = gr.Button("Approve shortlist", variant="primary")
+                shortlist_approve_status_md = gr.Markdown("")
+
+                shortlist_log_md = gr.Markdown(format_shortlist_log(new_shortlist_state()))
+
+            with gr.TabItem("10. Recommendation"):
+                gr.Markdown("### Recommendation")
+                gr.Markdown(RECOMMENDATION_INTRO_MD)
+
+                gr.Markdown("#### Highest-scoring supplier (computed)")
+                recommendation_highest_refresh_btn = gr.Button("Refresh")
+                recommendation_highest_md = gr.Markdown(
+                    "_Not refreshed yet — select a scoring mode in Setup and refresh._"
+                )
+
+                gr.Markdown("#### Human entry")
+                with gr.Row():
+                    recommendation_preferred_dd = gr.Dropdown(
+                        RECOMMENDATION_VENDOR_CHOICES, value="", label="Preferred supplier"
+                    )
+                    recommendation_recommended_dd = gr.Dropdown(
+                        RECOMMENDATION_VENDOR_CHOICES, value="", label="Recommended supplier"
+                    )
+                recommendation_reasons_tb = gr.Textbox(
+                    label="Reasons (required if a supplier is recommended)", lines=2
+                )
+                recommendation_risks_tb = gr.Textbox(label="Risks", lines=2)
+                recommendation_conditions_tb = gr.Textbox(
+                    label="Conditions / negotiation items", lines=2
+                )
+                recommendation_dissent_tb = gr.Textbox(label="Dissenting views", lines=2)
+                recommendation_record_btn = gr.Button(
+                    "Record recommendation", variant="primary"
+                )
+                recommendation_record_status_md = gr.Markdown("")
+
+                gr.Markdown("#### Approval")
+                recommendation_state = gr.State(new_recommendation_state())
+                recommendation_current_md = gr.Markdown(
+                    _format_current_recommendation_md(
+                        current_recommendation(new_recommendation_state())
+                    )
+                )
+                recommendation_approver_tb = gr.Textbox(label="Approver name")
+                recommendation_approve_btn = gr.Button(
+                    "Approve recommendation", variant="primary"
+                )
+                recommendation_approve_status_md = gr.Markdown("")
+
+                recommendation_log_md = gr.Markdown(
+                    format_recommendation_log(new_recommendation_state())
+                )
+
+            with gr.TabItem("11. Validation"):
                 gr.Markdown("### Validation questions for testers")
                 gr.Markdown(VALIDATION_QUESTIONS_MD)
 
-            with gr.TabItem("9. Compare (preview)"):
-                gr.Markdown("### Side-by-side vendor comparison")
-                gr.Markdown(
-                    "_Preview with sample data: two mock proposals against the "
-                    "customer/case scenario. Panel members score individually; "
-                    "consensus is reached in the evaluation workshop and recorded "
-                    "with a rationale. The tool never computes a blended winner._"
-                )
-
-                gr.Markdown("#### Mandatory gates (cannot be offset by scores)")
-                gr.Dataframe(
-                    headers=["Gate"] + VENDORS,
-                    value=gate_rows(),
-                    interactive=False,
-                    label="Mandatory gates",
-                )
-
-                gr.Markdown("#### Criterion comparison")
-                domain_dd = gr.Dropdown(
-                    ARCHITECTURE_DOMAINS,
-                    value=ARCHITECTURE_DOMAINS[0],
-                    label="Architecture domain",
-                )
-                comparison_df = gr.Dataframe(
-                    headers=["Criterion"] + VENDORS,
-                    value=comparison_rows(ARCHITECTURE_DOMAINS[0]),
-                    interactive=False,
-                    wrap=True,
-                    label="Vendor responses (evidence-linked)",
-                )
-
-                focus_md = gr.Markdown(format_focus_queue())
-
-                gr.Markdown("#### Criterion detail and workshop consensus")
-                gr.Markdown(f"_Score scale: {SCORE_SCALE}._")
-                criterion_dd = gr.Dropdown(
-                    [c["id"] for c in CRITERIA],
-                    value=CRITERIA[0]["id"],
-                    label="Criterion",
-                )
-                detail_md = gr.Markdown(format_criterion_detail(CRITERIA[0]["id"]))
-
-                with gr.Row():
-                    consensus_vendor_dd = gr.Dropdown(VENDORS, label="Vendor")
-                    consensus_score_dd = gr.Dropdown(
-                        [0, 1, 2, 3, 4, 5], label="Consensus score"
-                    )
-                consensus_rationale_tb = gr.Textbox(
-                    label="Consensus rationale (required)", lines=2
-                )
-                record_consensus_btn = gr.Button(
-                    "Record consensus", variant="primary"
-                )
-                consensus_status_md = gr.Markdown("")
-                consensus_log_state = gr.State([])
-                consensus_log_md = gr.Markdown(format_consensus_log([]))
-
         refresh_overview_btn.click(
-            lambda cap, via, setup_state, prop_state, elig_state: refresh_overview(
+            lambda cap, via, setup_state, prop_state, elig_state, cons_log, sl_state, rec_state: refresh_overview(
                 cap.values.tolist(),
                 via.values.tolist(),
                 setup_state,
                 prop_state,
                 elig_state,
+                cons_log,
+                sl_state,
+                rec_state,
             ),
             inputs=[
                 capability_df,
@@ -776,6 +1220,9 @@ def build_app():
                 setup_approval_state,
                 proposals_state,
                 eligibility_state,
+                consensus_log_state,
+                shortlist_state,
+                recommendation_state,
             ],
             outputs=overview_df,
         )
@@ -894,6 +1341,14 @@ def build_app():
             ],
         )
 
+        eval_progress_refresh_btn.click(
+            refresh_evaluation_progress, outputs=eval_progress_md
+        )
+
+        evaluator_dd.change(
+            evaluator_score_rows, inputs=evaluator_dd, outputs=evaluator_scores_df
+        )
+
         domain_dd.change(
             comparison_rows, inputs=domain_dd, outputs=comparison_df
         )
@@ -917,6 +1372,81 @@ def build_app():
                 consensus_rationale_tb,
             ],
             outputs=[consensus_log_state, consensus_status_md, consensus_log_md],
+        )
+
+        shortlist_refresh_btn.click(
+            on_refresh_shortlist_ranking,
+            inputs=[setup_scoring_mode_radio, consensus_log_state],
+            outputs=[
+                shortlist_mode_md,
+                shortlist_weighted_df,
+                shortlist_consensus_df,
+                shortlist_caution_md,
+            ],
+        )
+
+        shortlist_propose_btn.click(
+            on_propose_shortlist,
+            inputs=[
+                shortlist_state,
+                shortlist_proposal_tb,
+                shortlist_reason_tb,
+                setup_scoring_mode_radio,
+                consensus_log_state,
+            ],
+            outputs=[
+                shortlist_state,
+                shortlist_propose_status_md,
+                shortlist_log_md,
+                shortlist_current_md,
+            ],
+        )
+
+        shortlist_approve_btn.click(
+            on_approve_shortlist,
+            inputs=[shortlist_state, shortlist_approver_tb],
+            outputs=[
+                shortlist_state,
+                shortlist_approve_status_md,
+                shortlist_log_md,
+                shortlist_current_md,
+            ],
+        )
+
+        recommendation_highest_refresh_btn.click(
+            on_refresh_highest_scoring,
+            inputs=[setup_scoring_mode_radio, consensus_log_state],
+            outputs=recommendation_highest_md,
+        )
+
+        recommendation_record_btn.click(
+            on_record_recommendation,
+            inputs=[
+                recommendation_state,
+                recommendation_preferred_dd,
+                recommendation_recommended_dd,
+                recommendation_reasons_tb,
+                recommendation_risks_tb,
+                recommendation_conditions_tb,
+                recommendation_dissent_tb,
+            ],
+            outputs=[
+                recommendation_state,
+                recommendation_record_status_md,
+                recommendation_log_md,
+                recommendation_current_md,
+            ],
+        )
+
+        recommendation_approve_btn.click(
+            on_approve_recommendation,
+            inputs=[recommendation_state, recommendation_approver_tb],
+            outputs=[
+                recommendation_state,
+                recommendation_approve_status_md,
+                recommendation_log_md,
+                recommendation_current_md,
+            ],
         )
 
     return demo

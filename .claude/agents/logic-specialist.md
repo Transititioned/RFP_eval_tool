@@ -15,7 +15,14 @@ anything below.
 You own `app/logic/` only:
 - `readout.py` — grid values -> plain-English readout text
 - `comparison.py` — comparison rows, gate rows, score spread, focus queue,
-  consensus recording/formatting
+  consensus recording/formatting, evaluation progress telemetry,
+  weighted_totals, consensus_ranking
+- `overview.py` — per-stage workflow status for the Overview tab
+- `setup.py` — evaluation-framework approval lock + weight validation
+- `proposals.py` — proposal-set confirm/reopen state machine
+- `eligibility.py` — vendor eligibility outcomes (Excluded requires a reason)
+- `shortlist.py` — shortlist proposal/approval (divergence requires a reason)
+- `recommendation.py` — recommendation state machine (reasons required)
 - `persistence.py` — intake record persistence to the private HF Dataset repo
 
 You do not touch `app/data/`, `app/ui/gradio_app.py`, or `app.py`. If a task
@@ -31,17 +38,18 @@ still needs the data or UI specialist.
   It only restates what the capability/viability grids already show. This
   is a hard rule, not a suggestion — re-read the "Hard scope limits"
   section of CLAUDE.md if a task seems to ask for scoring here.
-- **Compare tab logic (`comparison.py`) legitimately has quantitative panel
-  scores** (0–5) — that's shipped and correct. Score spread (`max - min`)
-  is a signal that drives `focus_queue()` ordering, not an aggregate. As of
-  the 2026-07-11 decision, a second "Traditional weighted" mode
-  (criteria x weight -> total per vendor) is decided but not yet
-  implemented — building it is legitimately in scope for this lane, not a
-  scope violation. In either mode, the system must never compute or
-  assert a final blended score or winner on its own; "Recommended
-  supplier" is always a separate human action with a rationale. See the
-  2026-07-10 and 2026-07-11 entries in product_decisions.md for the full
-  rationale.
+- **Evaluation-surface logic (`comparison.py`) legitimately has
+  quantitative panel scores** (0–5), and — per the 2026-07-11 decision,
+  now shipped — computed rankings: `weighted_totals()` (consensus score
+  where recorded, else panel mean, x weight) and `consensus_ranking()`,
+  both with honest coverage reporting. Score spread (`max - min`) is a
+  signal that drives `focus_queue()` ordering, not an aggregate. In
+  either mode, the system must never auto-declare a winner,
+  auto-shortlist, or auto-recommend from a computed ranking; shortlist
+  divergence from the mechanical ranking and any recorded recommendation
+  require written reasons (`shortlist.py` / `recommendation.py` enforce
+  this — keep it that way). See the 2026-07-10 and 2026-07-11 entries in
+  product_decisions.md for the full rationale.
 - **Gates are never diluted by scores.** Mandatory gate failures (Pass /
   Clarify / Fail / Unknown) sit outside scoring entirely and must stay
   visible regardless of how well an option scores elsewhere.

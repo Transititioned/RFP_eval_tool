@@ -34,15 +34,13 @@ STATUSES = (
 )
 
 # Stages that have no computable state in this preview build: either the
-# tab is a stub (Options), or the stage doesn't exist yet at all. Hardcoded
-# to "Not started" rather than fabricated from unrelated sample/synthetic
-# data (e.g. Evaluation must not borrow progress from the Compare tab's
-# sample vendors).
+# tab is a stub (Options), or there's a static/standing tab with nothing to
+# derive (Validation). Hardcoded to "Not started" rather than fabricated
+# from unrelated sample/synthetic data. Evaluation/Shortlist/Recommendation
+# used to be hardcoded here too, but now have real derivable state — see
+# evaluation_status()/shortlist_status()/recommendation_status() below.
 _FIXED_NOT_STARTED_ACTIONS = {
     "Options": "Name candidate options in the Options tab once intake is saved.",
-    "Evaluation": "Not available in this preview build.",
-    "Shortlist": "Not available in this preview build.",
-    "Recommendation": "Not available in this preview build.",
     "Validation": "Review the standing validation questions in the Validation tab.",
 }
 
@@ -253,6 +251,91 @@ def eligibility_status(eligibility_state, eligibility_vendors=None):
     )
 
 
+def evaluation_status(consensus_log):
+    """Status/next_action for the Evaluation stage.
+
+    Derived only from user-recorded consensus entries
+    (``app.logic.comparison.record_consensus()``'s log shape), never from
+    the sample ``PANEL_SCORES`` data — scoring that data ships with would
+    fabricate progress the user hasn't actually recorded:
+    - None/empty log -> "Not started".
+    - Any recorded consensus entry -> "In progress". This stage has no
+      "Complete" state of its own here (completeness is what the
+      Shortlist/Recommendation stages build on).
+    """
+    if not consensus_log:
+        return (
+            "Not started",
+            "Score criteria in the Compare tab and record consensus for the panel.",
+        )
+    return (
+        "In progress",
+        "Continue recording consensus for remaining criteria in the Compare tab.",
+    )
+
+
+def _propose_approve_status(state, not_started_action, in_progress_action, needs_attention_action, complete_action):
+    """Shared status derivation for shortlist_state/recommendation_state.
+
+    Both state shapes follow the same propose-or-record -> approve pattern
+    with an explicit "approval_cleared" event on re-proposal/re-record, so
+    the status logic is identical modulo copy — see
+    app.logic.shortlist/app.logic.recommendation.
+    """
+    if not state:
+        return "Not started", not_started_action
+
+    events = state.get("events") or []
+    if not events:
+        return "Not started", not_started_action
+
+    if state.get("approved"):
+        return "Complete", complete_action
+
+    if any(e.get("type") == "approval_cleared" for e in events):
+        return "Needs attention", needs_attention_action
+
+    return "In progress", in_progress_action
+
+
+def shortlist_status(shortlist_state):
+    """Status/next_action for the Shortlist stage.
+
+    Derived only from ``app.logic.shortlist`` state:
+    - No events -> "Not started".
+    - Proposed but not approved -> "In progress".
+    - Approved -> "Complete".
+    - Approval cleared by a re-proposal -> "Needs attention" (never silently
+      still "Complete").
+    """
+    return _propose_approve_status(
+        shortlist_state,
+        not_started_action="Propose a shortlist in the Shortlist tab once vendor scoring is underway.",
+        in_progress_action="Shortlist proposed — approve it in the Shortlist tab.",
+        needs_attention_action="Shortlist was re-proposed after approval — review and re-approve.",
+        complete_action="Shortlist approved. Re-propose only with a reason if it must change.",
+    )
+
+
+def recommendation_status(recommendation_state):
+    """Status/next_action for the Recommendation stage.
+
+    Derived only from ``app.logic.recommendation`` state, same pattern as
+    ``shortlist_status()``:
+    - No events -> "Not started".
+    - Recorded but not approved -> "In progress".
+    - Approved -> "Complete".
+    - Approval cleared by a re-record -> "Needs attention".
+    """
+    return _propose_approve_status(
+        recommendation_state,
+        not_started_action="Record a supplier recommendation in the Recommendation tab once evaluation is complete.",
+        in_progress_action="Recommendation recorded — approve it in the Recommendation tab.",
+        needs_attention_action="Recommendation was re-recorded after approval — review and re-approve.",
+        complete_action="Recommendation approved. Re-record only with reasons if it must change.",
+    )
+
+
 def stage_statuses(
     intake_log_rows=None,
     capability_grid=None,
@@ -261,6 +344,9 @@ def stage_statuses(
     proposals_state=None,
     eligibility_state=None,
     eligibility_vendors=None,
+    consensus_log=None,
+    shortlist_state=None,
+    recommendation_state=None,
 ):
     """Status for every workflow stage, in STAGES order.
 
@@ -288,6 +374,19 @@ def stage_statuses(
     against (e.g. app.data.comparison_sample.VENDORS). Both omitted or None
     behaves exactly as before these parameters existed (Eligibility
     hardcoded to "Not started").
+
+    ``consensus_log`` is the list shape produced by
+    app.logic.comparison.record_consensus(); omitted or None/empty behaves
+    exactly as before this parameter existed (Evaluation hardcoded to "Not
+    started") — deliberately never derived from the sample PANEL_SCORES.
+
+    ``shortlist_state`` is the dict shape produced by
+    app.logic.shortlist.new_shortlist_state() / propose_shortlist() /
+    approve_shortlist(); ``recommendation_state`` is the dict shape produced
+    by app.logic.recommendation.new_recommendation_state() /
+    record_recommendation() / approve_recommendation(). Both omitted or None
+    behave exactly as before these parameters existed (Shortlist/
+    Recommendation hardcoded to "Not started").
     """
     intake_log_rows = intake_log_rows or []
     capability_grid = capability_grid or []
@@ -303,6 +402,9 @@ def stage_statuses(
     eligibility_stat, eligibility_action = eligibility_status(
         eligibility_state, eligibility_vendors
     )
+    evaluation_stat, evaluation_action = evaluation_status(consensus_log)
+    shortlist_stat, shortlist_action = shortlist_status(shortlist_state)
+    recommendation_stat, recommendation_action = recommendation_status(recommendation_state)
 
     per_stage = {
         "Intake": (intake_stat, intake_action),
@@ -311,6 +413,9 @@ def stage_statuses(
         "Setup": (setup_stat, setup_action),
         "Proposals": (proposals_stat, proposals_action),
         "Eligibility": (eligibility_stat, eligibility_action),
+        "Evaluation": (evaluation_stat, evaluation_action),
+        "Shortlist": (shortlist_stat, shortlist_action),
+        "Recommendation": (recommendation_stat, recommendation_action),
     }
 
     results = []

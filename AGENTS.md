@@ -3,15 +3,19 @@
 ## Product
 
 RFP Evaluation Tool / Capability Sourcing Workbench — a decision aid for
-capability-led technology sourcing. Ten-tab Gradio workflow: Overview
+capability-led technology sourcing. Twelve-tab Gradio workflow: Overview
 (per-stage status chips + next recommended action), Intake, Options,
 Assessment Detail (Capability Coverage Matrix + Baseline Viability Gate),
 Readout, Setup (evaluation framework: team, criteria/weights, scoring
 mode, approval lock with reasoned reopen), Proposals (readiness register
 + confirm/reopen), Eligibility (vendor gate; exclusion requires a
-reason), Validation, and Compare (panel scoring, mandatory gates,
-consensus recording). Core principle: evaluate the capability first;
-check enterprise viability before sparkle.
+reason), Evaluation (landing dashboard + Evaluate/Compare/Moderate
+views: panel scoring, mandatory gates, consensus recording), Shortlist
+(mode-aware computed ranking + separate human shortlist decision;
+divergence requires a reason), Recommendation (highest-scoring computed
+vs preferred/recommended/approved human-entered, reasons required), and
+Validation. Core principle: evaluate the capability first; check
+enterprise viability before sparkle.
 
 ## Hard scope limits — do not add
 
@@ -26,11 +30,11 @@ the intake log without asking first.
 
 Panel scores, score variance, evidence/confidence fields, human-entered
 consensus roll-ups, and traditional weighted criteria scoring are **not**
-on this list — they're shipped/planned Compare-tab features, offered as
-two selectable modes (Panel + Consensus, and Traditional weighted).
-What's excluded is the tool auto-declaring a winner without a separate
-human recommendation action. See the 2026-07-11 entry in
-`docs/product_decisions.md` for the full resolution.
+on this list — they're shipped features of the Evaluation, Shortlist and
+Recommendation tabs, offered as two selectable modes (Panel + Consensus,
+and Traditional weighted). What's excluded is the tool auto-declaring a
+winner without a separate human recommendation action. See the
+2026-07-11 entry in `docs/product_decisions.md` for the full resolution.
 
 ## Intake persistence
 
@@ -48,7 +52,7 @@ this is still a learning-stage prototype.
 - Python + Gradio only. Not React/Vercel.
 - Prefer simple readable Python over clever abstractions.
 - Keep Hugging Face Spaces compatibility (pinned `gradio==6.19.0`, matching the Space `sdk_version` in README.md).
-- The **Readout tab** only restates the grids — no scores, no weighting, no roll-ups, and no algorithmic/automatic scoring there. That's specific to Readout, not a whole-app rule: the **Compare tab** legitimately has panel scores, variance, human-entered consensus roll-ups, and (per the 2026-07-11 decision) traditional weighted criteria totals — algorithmic scoring is permitted there, but the tool must never use it to auto-declare a winner; "Recommended supplier" is always a separate human action.
+- The **Readout tab** only restates the grids — no scores, no weighting, no roll-ups, and no algorithmic/automatic scoring there. That's specific to Readout, not a whole-app rule: the **Evaluation, Shortlist and Recommendation tabs** legitimately have panel scores, variance, human-entered consensus roll-ups, and (per the 2026-07-11 decision) traditional weighted criteria totals with mode-aware rankings — algorithmic scoring is permitted there, but the tool must never use it to auto-declare a winner, auto-shortlist, or auto-recommend; "Recommended supplier" is always a separate human action.
 - Design tone: serious enterprise B2B, restrained, architecture-review-board credible.
 
 ## Workflow

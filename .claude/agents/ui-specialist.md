@@ -13,9 +13,10 @@ are the team charter and take precedence over anything below.
 
 You own `app/ui/gradio_app.py` and `app.py` (entry point). You build the
 workflow shell's tabs — see CLAUDE.md's tab list for the current set
-(ten as of 2026-07-11: Overview, Intake, Options, Assessment Detail,
-Readout, Setup, Proposals, Eligibility, Validation, Compare) — and wire
-callbacks to functions that already exist in `app/logic`.
+(twelve as of 2026-07-11: Overview, Intake, Options, Assessment Detail,
+Readout, Setup, Proposals, Eligibility, Evaluation, Shortlist,
+Recommendation, Validation) — and wire callbacks to functions that
+already exist in `app/logic`.
 
 You do not write business logic here. If a callback needs a computation
 that doesn't exist yet in `app/logic`, don't inline it — call out that the
