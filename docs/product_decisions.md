@@ -2,6 +2,62 @@
 
 Decision record for the Capability Sourcing Workbench upgrade. Newest first.
 
+## 2026-07-11 — Future direction: AI evidence read-in and AI cross-check assessment
+
+Context: the hard scope limits were staging devices for building the PoC
+in stages, not permanent product boundaries. The real application will
+not run on Hugging Face — it will be privately hosted, and onboarding
+into an enterprise means this tool will face its own security and
+procurement assessments. The AI feature set must be designed to survive
+that scrutiny.
+
+Direction decided (for the post-PoC, privately-hosted build — none of
+this enters the current public PoC):
+
+1. **AI evidence read-in with citations.** AI extracts candidate
+   evidence per criterion from uploaded vendor responses into the
+   existing `RESPONSES` shape (evidence reference, confidence, gaps).
+   Every extraction is human-verified before it counts toward anything;
+   unverified extractions stay visibly flagged, the same visibility
+   principle as `NOT ANSWERED` and provisional weighted totals. AI may
+   also draft clarification questions from identified gaps — humans
+   review and send them.
+
+2. **AI cross-check assessment through role lenses.** AI may produce a
+   shadow assessment through the panel's role lenses (business,
+   architecture, technical delivery) as a cross-check on the human
+   panel — divergence between the AI assessment and human scores becomes
+   another signal in the existing focus-queue mechanism, alongside
+   human-to-human score spread. AI scores are strictly segregated: they
+   never enter consensus, weighted totals, rankings, shortlist, or
+   recommendation inputs. They exist to prompt human re-examination,
+   nothing else.
+
+3. **The unchanged boundary.** Humans score, humans decide. Neither the
+   tool nor its AI ever auto-declares a winner, auto-shortlists, or
+   auto-recommends. This is the same line drawn on 2026-07-10 and
+   2026-07-11 (scoring modes), applied to AI features.
+
+Staging (revised same day — the original phrasing was stricter than the
+risk justifies):
+
+- **Once the HF Space is switched to private**, building and testing the
+  upload/read-in flow with **synthetic (fake) RFP documents** is in
+  scope. The protection that matters is synthetic-data-only, and that
+  rule stays in force regardless of hosting: fake documents carry no
+  confidentiality risk, and a private Space (HF login, grantable access,
+  MFA available on HF accounts) is proportionate access control for
+  PoC-stage testing.
+- **Real vendor documents** remain excluded until enterprise-grade
+  controls exist — SSO/MFA, audit logging, retention/deletion, and a
+  hosting arrangement with an actual enterprise agreement behind it (see
+  `docs/backlog.md`). Realistically no enterprise would onboard before
+  that anyway; the product must expect to pass the same kind of
+  assessment it runs on vendors.
+- The AI cross-check lenses can likewise be prototyped against synthetic
+  documents once the read-in flow exists; the segregation rules above
+  apply from the first prototype, not just production.
+
 ## 2026-07-11 — Scoring model: add traditional weighted mode alongside panel consensus
 
 Revisits the blanket "no weighted scores" hard limit from 2026-07-10. The

@@ -20,9 +20,15 @@ enterprise viability before sparkle.
 ## Hard scope limits — do not add
 
 Role lenses, Market Clarity, bid waste reduction, vendor self-assessment,
-challenger path, document upload, AI-generated scoring or summarisation, RFP PDF
-parsing, procurement workflow, report builder, broad exports, architecture
-repository features, generated clarification questions, authentication.
+challenger path, real document upload, AI-generated scoring or summarisation,
+RFP PDF parsing, procurement workflow, report builder, broad exports,
+architecture repository features, generated clarification questions,
+authentication.
+
+Staging note: per the 2026-07-11 future-direction decision, synthetic
+(fake) RFP document upload for flow testing becomes in scope once the HF
+Space is private — synthetic-data-only is the operative rule. Real vendor
+documents stay excluded until enterprise controls exist.
 
 Intake persistence is a deliberate, narrow exception (see below) — don't
 read this list as still excluding it, and don't expand persistence beyond

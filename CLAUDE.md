@@ -57,6 +57,15 @@ summarisation, RFP PDF parsing, procurement workflow integrations, report
 builder, broad exports, architecture repository features, generated
 clarification questions, authentication, multi-tenant workspaces.
 
+Staging note (2026-07-11 future-direction decision): once the HF Space is
+switched to **private**, upload/read-in of **synthetic (fake) RFP
+documents** for flow testing becomes in scope — the operative rule is
+synthetic-data-only, not no-upload. Real vendor documents stay excluded
+until enterprise controls (SSO/MFA, audit logging, retention) exist. AI
+read-in and AI cross-check lenses may then be prototyped against
+synthetic documents only, under the segregation rules in
+`docs/product_decisions.md`.
+
 **No scoring, no weighting, no roll-ups in the Readout tab or capability/
 viability grids** — the readout only restates what the grids already show.
 The Evaluation/Shortlist/Recommendation tabs carry both scoring modes per
