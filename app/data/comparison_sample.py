@@ -1,15 +1,17 @@
 """Sample data for the side-by-side vendor comparison (proof of concept).
 
-Two mock vendor proposals responding to the customer/case capability RFP:
+Three mock vendor proposals responding to the customer/case capability RFP:
 - Acme CaseWorks: established case management platform, unexciting but solid.
 - NovaAI FlowSuite: AI-led workflow/analytics product, strong demos, thin
   enterprise evidence.
+- Titan Public Sector Suite: large incumbent-style vendor, heavy on
+  compliance/process rigour, light on modern integration and slow to adapt.
 
 Panel of three evaluators, scoring 0-5 per criterion per vendor. All data
 is synthetic. Evidence references point at fictional proposal pages.
 """
 
-VENDORS = ["Acme CaseWorks", "NovaAI FlowSuite"]
+VENDORS = ["Acme CaseWorks", "NovaAI FlowSuite", "Titan Public Sector Suite"]
 
 EVALUATORS = ["Business Rep", "Architect", "Tech PM"]
 
@@ -29,17 +31,29 @@ GATES = [
     {
         "id": "GATE-01",
         "statement": "Customer data held in-region (data residency)",
-        "status": {"Acme CaseWorks": "Pass", "NovaAI FlowSuite": "Clarify"},
+        "status": {
+            "Acme CaseWorks": "Pass",
+            "NovaAI FlowSuite": "Clarify",
+            "Titan Public Sector Suite": "Pass",
+        },
     },
     {
         "id": "GATE-02",
         "statement": "Full data export available on exit (no lock-in)",
-        "status": {"Acme CaseWorks": "Pass", "NovaAI FlowSuite": "Fail"},
+        "status": {
+            "Acme CaseWorks": "Pass",
+            "NovaAI FlowSuite": "Fail",
+            "Titan Public Sector Suite": "Pass",
+        },
     },
     {
         "id": "GATE-03",
         "statement": "Audit logging of all user and admin actions",
-        "status": {"Acme CaseWorks": "Pass", "NovaAI FlowSuite": "Clarify"},
+        "status": {
+            "Acme CaseWorks": "Pass",
+            "NovaAI FlowSuite": "Clarify",
+            "Titan Public Sector Suite": "Pass",
+        },
     },
 ]
 
@@ -96,6 +110,12 @@ RESPONSES = {
         "gaps": ["Review/QA stage not demonstrated"],
         "confidence": "Medium",
     },
+    ("APP-01", "Titan Public Sector Suite"): {
+        "summary": "Full lifecycle supported; intake through review handled by well-established modules, evidenced by long incumbent deployment history.",
+        "evidence": "Proposal p.31, section 6.1; reference site visit notes",
+        "gaps": [],
+        "confidence": "High",
+    },
     ("APP-02", "Acme CaseWorks"): {
         "summary": "Rules engine with versioned configuration; vendor states 90% of typical changes need no code.",
         "evidence": "Proposal p.18, section 4.1",
@@ -107,6 +127,12 @@ RESPONSES = {
         "evidence": "Proposal p.11, section 3.1",
         "gaps": ["No detail on validating or testing AI-applied changes"],
         "confidence": "Low",
+    },
+    ("APP-02", "Titan Public Sector Suite"): {
+        "summary": "Business rule changes require vendor professional services engagement; no self-service configuration surfaced in proposal.",
+        "evidence": "Proposal p.40, section 8.2 (change request process)",
+        "gaps": ["No configuration-over-customisation path; every change is a paid change request"],
+        "confidence": "High",
     },
     ("APP-03", "Acme CaseWorks"): {
         "summary": "Case record ownership explicit; customer master remains in ERP with documented sync pattern.",
@@ -120,6 +146,12 @@ RESPONSES = {
         "gaps": ["System-of-record boundary not defined", "Conflicts with GATE-02 export concern"],
         "confidence": "Low",
     },
+    ("APP-03", "Titan Public Sector Suite"): {
+        "summary": "Long-documented system-of-record boundaries as part of standard implementation methodology; customer master stays in ERP.",
+        "evidence": "Proposal p.34, integration diagram 6.4",
+        "gaps": [],
+        "confidence": "High",
+    },
     ("APP-04", "Acme CaseWorks"): {
         "summary": "Drag-and-drop workflow designer; vendor cites two reference customers where business staff maintain workflows.",
         "evidence": "Proposal p.19, section 4.3; references appendix D",
@@ -130,6 +162,12 @@ RESPONSES = {
         "summary": "Workflows generated from prompts; impressive demo, but no reference customers using it in production yet.",
         "evidence": "Proposal p.12, section 3.3",
         "gaps": ["No production references"],
+        "confidence": "Medium",
+    },
+    ("APP-04", "Titan Public Sector Suite"): {
+        "summary": "Workflow designer exists but proposal states business staff typically shadow a vendor consultant for the first two changes.",
+        "evidence": "Proposal p.41, section 8.3",
+        "gaps": ["Usable by trained business staff without vendor involvement not evidenced"],
         "confidence": "Medium",
     },
     ("API-01", "Acme CaseWorks"): {
@@ -143,6 +181,12 @@ RESPONSES = {
         "evidence": "Proposal p.17, section 5.1",
         "gaps": ["API specification not supplied"],
         "confidence": "Low",
+    },
+    ("API-01", "Titan Public Sector Suite"): {
+        "summary": "Hybrid SOAP/REST API layer; REST coverage limited to case entity, remaining entities SOAP-only pending a roadmap upgrade.",
+        "evidence": "Proposal p.45, section 9.1",
+        "gaps": ["Customer and document entities are SOAP-only today"],
+        "confidence": "Medium",
     },
     ("API-02", "Acme CaseWorks"): {
         "summary": "Webhook events for case state changes; no native streaming, batch export to data lake nightly.",
@@ -163,6 +207,14 @@ RESPONSES = {
         "confidence": "High",
     },
     # NovaAI FlowSuite did not answer CLD-01 — intentionally absent.
+    ("CLD-01", "Titan Public Sector Suite"): {
+        "summary": "RPO 5 min / RTO 1 h with quarterly DR test cadence, evidenced by two years of test reports.",
+        "evidence": "Proposal p.52, section 10.2; appendix F (DR test history)",
+        "gaps": [],
+        "confidence": "High",
+    },
+    # Titan Public Sector Suite did not answer API-02 (no event architecture,
+    # nightly batch only) — intentionally absent.
 }
 
 # (criterion_id, vendor) -> {evaluator: score 0-5}. Individual scores are
@@ -170,16 +222,23 @@ RESPONSES = {
 PANEL_SCORES = {
     ("APP-01", "Acme CaseWorks"): {"Business Rep": 4, "Architect": 4, "Tech PM": 4},
     ("APP-01", "NovaAI FlowSuite"): {"Business Rep": 4, "Architect": 2, "Tech PM": 3},
+    ("APP-01", "Titan Public Sector Suite"): {"Business Rep": 4, "Architect": 3, "Tech PM": 3},
     ("APP-02", "Acme CaseWorks"): {"Business Rep": 3, "Architect": 3, "Tech PM": 4},
     ("APP-02", "NovaAI FlowSuite"): {"Business Rep": 4, "Architect": 1, "Tech PM": 2},
+    ("APP-02", "Titan Public Sector Suite"): {"Business Rep": 2, "Architect": 2, "Tech PM": 1},
     ("APP-03", "Acme CaseWorks"): {"Business Rep": 4, "Architect": 5, "Tech PM": 4},
     ("APP-03", "NovaAI FlowSuite"): {"Business Rep": 3, "Architect": 1, "Tech PM": 1},
+    ("APP-03", "Titan Public Sector Suite"): {"Business Rep": 4, "Architect": 4, "Tech PM": 4},
     ("APP-04", "Acme CaseWorks"): {"Business Rep": 4, "Architect": 4, "Tech PM": 3},
     ("APP-04", "NovaAI FlowSuite"): {"Business Rep": 5, "Architect": 2, "Tech PM": 3},
+    ("APP-04", "Titan Public Sector Suite"): {"Business Rep": 2, "Architect": 3, "Tech PM": 1},
     ("API-01", "Acme CaseWorks"): {"Business Rep": 3, "Architect": 5, "Tech PM": 4},
     ("API-01", "NovaAI FlowSuite"): {"Business Rep": 3, "Architect": 1, "Tech PM": 2},
+    ("API-01", "Titan Public Sector Suite"): {"Business Rep": 3, "Architect": 2, "Tech PM": 3},
     ("API-02", "Acme CaseWorks"): {"Business Rep": 3, "Architect": 3, "Tech PM": 3},
     ("API-02", "NovaAI FlowSuite"): {"Business Rep": 4, "Architect": 3, "Tech PM": 4},
+    ("API-02", "Titan Public Sector Suite"): {"Business Rep": 0, "Architect": 0, "Tech PM": 0},
     ("CLD-01", "Acme CaseWorks"): {"Business Rep": 4, "Architect": 4, "Tech PM": 4},
     ("CLD-01", "NovaAI FlowSuite"): {"Business Rep": 0, "Architect": 0, "Tech PM": 0},
+    ("CLD-01", "Titan Public Sector Suite"): {"Business Rep": 5, "Architect": 5, "Tech PM": 4},
 }
