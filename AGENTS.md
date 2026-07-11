@@ -3,13 +3,15 @@
 ## Product
 
 RFP Evaluation Tool / Capability Sourcing Workbench — a decision aid for
-capability-led technology sourcing. Eight-tab Gradio workflow: Overview
+capability-led technology sourcing. Ten-tab Gradio workflow: Overview
 (per-stage status chips + next recommended action), Intake, Options,
 Assessment Detail (Capability Coverage Matrix + Baseline Viability Gate),
 Readout, Setup (evaluation framework: team, criteria/weights, scoring
-mode, approval lock with reasoned reopen), Validation, and Compare (panel
-scoring, mandatory gates, consensus recording). Core principle: evaluate
-the capability first; check enterprise viability before sparkle.
+mode, approval lock with reasoned reopen), Proposals (readiness register
++ confirm/reopen), Eligibility (vendor gate; exclusion requires a
+reason), Validation, and Compare (panel scoring, mandatory gates,
+consensus recording). Core principle: evaluate the capability first;
+check enterprise viability before sparkle.
 
 ## Hard scope limits — do not add
 

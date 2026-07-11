@@ -3,8 +3,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.logic.eligibility import new_eligibility_state, record_eligibility
 from app.logic.overview import STAGES, STATUSES, format_overview, stage_statuses
+from app.logic.proposals import confirm_proposal_set, new_proposal_state, reopen_proposal_set
 from app.logic.setup import approve_framework, new_approval_state, reopen_framework
+
+VENDORS = ["Acme CaseWorks", "NovaAI FlowSuite", "Titan Public Sector Suite"]
 
 
 def _by_stage(statuses):
@@ -143,6 +147,124 @@ def test_format_overview_renders_a_table():
     assert "Intake" in rendered
     assert "Not started" in rendered
     assert rendered.startswith("| Stage |")
+
+
+def test_stage_statuses_without_proposals_or_eligibility_args_is_backward_compatible():
+    statuses = _by_stage(
+        stage_statuses(intake_log_rows=[], capability_grid=[], viability_grid=[])
+    )
+    assert statuses["Proposals"]["status"] == "Not started"
+    assert statuses["Proposals"]["next_action"]
+    assert statuses["Eligibility"]["status"] == "Not started"
+    assert statuses["Eligibility"]["next_action"]
+
+
+def test_proposals_status_never_confirmed_is_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            proposals_state=new_proposal_state(),
+        )
+    )
+    assert statuses["Proposals"]["status"] == "Not started"
+
+
+def test_proposals_status_confirmed_is_complete():
+    state, _ = confirm_proposal_set(new_proposal_state(), note="Panel reviewed all vendors.")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            proposals_state=state,
+        )
+    )
+    assert statuses["Proposals"]["status"] == "Complete"
+
+
+def test_proposals_status_reopened_needs_attention():
+    state, _ = confirm_proposal_set(new_proposal_state())
+    reopened, _ = reopen_proposal_set(state, "Late vendor proposal accepted.")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            proposals_state=reopened,
+        )
+    )
+    assert statuses["Proposals"]["status"] == "Needs attention"
+
+
+def test_eligibility_status_no_outcomes_not_started():
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=new_eligibility_state(), eligibility_vendors=VENDORS,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "Not started"
+
+
+def test_eligibility_status_some_assessed_in_progress():
+    state, _ = record_eligibility(new_eligibility_state(), "Acme CaseWorks", "Eligible")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=state, eligibility_vendors=VENDORS,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "In progress"
+
+
+def test_eligibility_status_all_assessed_complete():
+    state = new_eligibility_state()
+    for vendor in VENDORS:
+        state, _ = record_eligibility(state, vendor, "Eligible")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=state, eligibility_vendors=VENDORS,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "Complete"
+
+
+def test_eligibility_status_clarification_required_needs_attention_even_if_all_assessed():
+    state = new_eligibility_state()
+    for vendor in VENDORS:
+        state, _ = record_eligibility(state, vendor, "Eligible")
+    state, _ = record_eligibility(state, VENDORS[0], "Clarification required")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=state, eligibility_vendors=VENDORS,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "Needs attention"
+
+
+def test_eligibility_status_without_vendor_list_never_claims_complete():
+    state, _ = record_eligibility(new_eligibility_state(), "Acme CaseWorks", "Eligible")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=state,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "In progress"
+
+
+def test_eligibility_status_excluded_vendor_still_counts_toward_assessed():
+    state = new_eligibility_state()
+    for vendor in VENDORS:
+        if vendor == "NovaAI FlowSuite":
+            state, _ = record_eligibility(state, vendor, "Excluded", "Failed mandatory gate.")
+        else:
+            state, _ = record_eligibility(state, vendor, "Eligible")
+    statuses = _by_stage(
+        stage_statuses(
+            intake_log_rows=[], capability_grid=[], viability_grid=[],
+            eligibility_state=state, eligibility_vendors=VENDORS,
+        )
+    )
+    assert statuses["Eligibility"]["status"] == "Complete"
 
 
 if __name__ == "__main__":

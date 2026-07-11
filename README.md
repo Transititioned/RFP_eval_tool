@@ -28,7 +28,7 @@ contract** — features are prioritised by value, not by the plan's order.
 
 ## What the app does today
 
-The app opens into a guided eight-tab workflow. Each tab also stands alone —
+The app opens into a guided ten-tab workflow. Each tab also stands alone —
 you don't have to complete earlier tabs to use a later one.
 
 1. **Overview** — workflow status at a glance: one row per stage (Intake,
@@ -37,9 +37,10 @@ you don't have to complete earlier tabs to use a later one.
    (Not started / In progress / Needs attention / Ready for approval /
    Complete) and a short next-recommended-action line. Statuses are
    computed honestly from real state (the saved intake log, the current
-   grid values, the Setup approval state); stages not yet built always
-   show "Not started". A "Refresh status" button re-checks. No scores or
-   completion percentages.
+   grid values, the Setup approval state, the proposal-set confirmation,
+   recorded eligibility outcomes); stages not yet built always show "Not
+   started". A "Refresh status" button re-checks. No scores or completion
+   percentages.
 2. **Intake** — sourcing request fields (project name, requester role,
    business area, problem statement, why now, primary capability, decision
    date, budget/compliance/incumbent/licence flags). "Save intake /
@@ -74,9 +75,25 @@ you don't have to complete earlier tabs to use a later one.
    — every approve/reopen event is timestamped in a visible audit log.
    This is what prevents weights being quietly retuned after proposals
    arrive.
-7. **Validation** — the five standing questions for anyone testing the
+7. **Proposals** — a supplier/proposal readiness register over the sample
+   vendors (Invited / Loaded / Reviewed / Accepted into evaluation). This
+   is sample-data status only — the tool does not upload, parse, or
+   extract documents. "Confirm proposal set" records the confirmation
+   with a timestamped audit log; reopening the set afterwards requires a
+   stated reason, same as the Setup approval lock.
+8. **Eligibility** — a vendor-level mandatory-requirements gate, distinct
+   from Assessment Detail's Baseline Viability Gate (that gate assesses
+   options; this one assesses vendor proposals). Shows a requirement ×
+   vendor compliance table, and lets a human record exactly one outcome
+   per vendor: Eligible, Conditionally eligible, Clarification required,
+   or Excluded — **recording an exclusion requires a stated reason**, and
+   excluded vendors stay visible with that reason rather than
+   disappearing. Outcomes sit outside scoring: an exclusion is never
+   offset by good scores, and the tool never derives an outcome from the
+   compliance table on its own.
+9. **Validation** — the five standing questions for anyone testing the
    tool (below).
-8. **Compare (preview)** — side-by-side vendor comparison, the product's
+10. **Compare (preview)** — side-by-side vendor comparison, the product's
    central experience, previewed against two sample vendor proposals:
    - **Mandatory gates** shown separately from scoring (data residency,
      data export, audit logging) — a gate failure can never be offset by
@@ -167,15 +184,17 @@ and the Intake tab says so; the rest of the app still works.
 
 - `app.py` — entry point
 - `app/data/sample_data.py` — scenario, headers, blank and completed sample grids
-- `app/data/comparison_sample.py` — sample vendor proposals, criteria (with weights), gates, panel scores, evaluation team, scoring scale/modes and shortlist rule for Compare and Setup
+- `app/data/comparison_sample.py` — sample vendor proposals, criteria (with weights), gates, panel scores, evaluation team, scoring scale/modes, shortlist rule, proposal readiness and eligibility compliance for Compare, Setup, Proposals and Eligibility
 - `app/logic/overview.py` — per-stage workflow status for the Overview tab
 - `app/logic/setup.py` — evaluation-framework approval lock and weights-sum check
+- `app/logic/proposals.py` — proposal-set confirm/reopen state machine and readiness rows
+- `app/logic/eligibility.py` — vendor eligibility outcomes (exclusion requires a reason)
 - `app/logic/readout.py` — plain-English readout generation
 - `app/logic/comparison.py` — comparison rows, score spread, focus queue, consensus recording
 - `app/logic/persistence.py` — appends intake records to a private HF Dataset repo
-- `app/ui/gradio_app.py` — Gradio UI (eight-tab workflow shell)
+- `app/ui/gradio_app.py` — Gradio UI (ten-tab workflow shell)
 - `docs/` — product brief, product decisions, backlog, validation test script
-- `tests/` — unit tests for readout, comparison, overview, and setup logic
+- `tests/` — unit tests for readout, comparison, overview, setup, proposals, and eligibility logic
 
 ## Validation questions for testers
 

@@ -16,8 +16,12 @@ from app.data.comparison_sample import (
     ARCHITECTURE_DOMAINS,
     CRITERIA,
     DEFAULT_SCORING_MODE,
+    ELIGIBILITY_COMPLIANCE,
+    ELIGIBILITY_OUTCOMES,
     EVALUATION_TEAM,
     GATES,
+    PROPOSAL_READINESS,
+    PROPOSAL_STATUSES,
     SCORE_SCALE,
     SCORING_MODES,
     SCORING_SCALE,
@@ -32,9 +36,24 @@ from app.logic.comparison import (
     gate_rows,
     record_consensus,
 )
+from app.logic.eligibility import (
+    compliance_rows,
+    current_outcomes,
+    format_eligibility_log,
+    new_eligibility_state,
+    record_eligibility,
+)
 from app.logic.overview import stage_statuses
 from app.logic.persistence import FIELDNAMES as INTAKE_LOG_FIELDNAMES
 from app.logic.persistence import append_intake_record, load_intake_log
+from app.logic.proposals import (
+    confirm_proposal_set,
+    format_proposal_log,
+    is_confirmed,
+    new_proposal_state,
+    proposal_rows,
+    reopen_proposal_set,
+)
 from app.logic.readout import generate_readout
 from app.logic.setup import (
     approve_framework,
@@ -99,6 +118,22 @@ SETUP_GATES_INTRO_MD = (
     "Requirements defined here sit outside scoring entirely and are "
     "evaluated per vendor in the Compare tab — a failed mandatory "
     "requirement can never be offset by a good score elsewhere."
+)
+
+PROPOSALS_INTRO_MD = (
+    "Supplier and proposal readiness register for this evaluation. The "
+    "table below is sample data for this preview build — this tool does "
+    "not upload, parse or extract vendor documents; readiness is logged "
+    "manually by the evaluation office as proposals are loaded and reviewed."
+)
+
+ELIGIBILITY_INTRO_MD = (
+    "This eligibility gate applies to **vendors** (proposals), distinct "
+    "from the Baseline Viability Gate in Assessment Detail, which applies "
+    "to **options**. Eligibility sits outside scoring: an exclusion here is "
+    "never offset by a good score elsewhere. The compliance table below is "
+    "sample data — outcomes are always recorded as a deliberate human "
+    "action, never derived from it automatically."
 )
 
 # Presentation-only status -> (background, text) colour mapping for the
@@ -266,7 +301,13 @@ def on_reopen_setup_framework(state, reason):
     )
 
 
-def refresh_overview(capability_grid, viability_grid, setup_approval_state=None):
+def refresh_overview(
+    capability_grid,
+    viability_grid,
+    setup_approval_state=None,
+    proposals_state=None,
+    eligibility_state=None,
+):
     """Refresh the Overview tab's workflow status table.
 
     Thin wiring: fetches the persisted intake log (degrading to [] if
@@ -280,8 +321,45 @@ def refresh_overview(capability_grid, viability_grid, setup_approval_state=None)
         capability_grid,
         viability_grid,
         setup_approval_state=setup_approval_state,
+        proposals_state=proposals_state,
+        eligibility_state=eligibility_state,
+        eligibility_vendors=VENDORS,
     )
     return _overview_table_rows(statuses)
+
+
+def on_confirm_proposal_set(state, note):
+    new_state, message = confirm_proposal_set(state, note)
+    confirmed = is_confirmed(new_state)
+    return (
+        new_state,
+        message,
+        format_proposal_log(new_state),
+        gr.update(interactive=not confirmed),
+    )
+
+
+def on_reopen_proposal_set(state, reason):
+    new_state, message = reopen_proposal_set(state, reason)
+    confirmed = is_confirmed(new_state)
+    return (
+        new_state,
+        message,
+        format_proposal_log(new_state),
+        gr.update(interactive=not confirmed),
+    )
+
+
+def on_record_eligibility(state, vendor, outcome, reason):
+    new_state, message = record_eligibility(
+        state, vendor, outcome, reason, outcomes=ELIGIBILITY_OUTCOMES
+    )
+    return (
+        new_state,
+        message,
+        current_outcomes(new_state, VENDORS),
+        format_eligibility_log(new_state),
+    )
 
 
 def build_app():
@@ -307,6 +385,9 @@ def build_app():
                             capability_grid=blank_capability_matrix(),
                             viability_grid=blank_viability_gate(),
                             setup_approval_state=new_approval_state(),
+                            proposals_state=new_proposal_state(),
+                            eligibility_state=new_eligibility_state(),
+                            eligibility_vendors=VENDORS,
                         )
                     ),
                     datatype=["str", "html", "str"],
@@ -532,11 +613,99 @@ def build_app():
                     format_approval_log(new_approval_state())
                 )
 
-            with gr.TabItem("6. Validation"):
+            with gr.TabItem("6. Proposals"):
+                gr.Markdown("### Vendor proposal readiness")
+                gr.Markdown(PROPOSALS_INTRO_MD)
+
+                gr.Markdown("#### Readiness register")
+                gr.Dataframe(
+                    headers=["Vendor", "Status", "Note"],
+                    value=proposal_rows(VENDORS, PROPOSAL_READINESS),
+                    interactive=False,
+                    wrap=True,
+                    row_count=(len(VENDORS), "fixed"),
+                    column_count=(3, "fixed"),
+                    label="Proposal readiness",
+                )
+                gr.Markdown(
+                    "**Readiness progression:** " + " → ".join(PROPOSAL_STATUSES)
+                )
+
+                gr.Markdown("#### Confirm proposal set")
+                gr.Markdown(
+                    "Confirming signals that every vendor proposal intended for "
+                    "this evaluation has been loaded and reviewed. This is a "
+                    "session record scoped to this workbench session, not a "
+                    "persisted approval."
+                )
+                proposals_state = gr.State(new_proposal_state())
+                proposals_confirm_note_tb = gr.Textbox(
+                    label="Confirmation note (optional)", lines=1
+                )
+                proposals_confirm_btn = gr.Button(
+                    "Confirm proposal set", variant="primary"
+                )
+                proposals_status_md = gr.Markdown("")
+
+                gr.Markdown("#### Reopen proposal set")
+                proposals_reopen_reason_tb = gr.Textbox(
+                    label="Reason for reopening (required)", lines=1
+                )
+                proposals_reopen_btn = gr.Button("Reopen proposal set")
+
+                proposals_log_md = gr.Markdown(format_proposal_log(new_proposal_state()))
+
+            with gr.TabItem("7. Eligibility"):
+                gr.Markdown("### Vendor eligibility")
+                gr.Markdown(ELIGIBILITY_INTRO_MD)
+
+                gr.Markdown("#### Requirement compliance")
+                gr.Dataframe(
+                    headers=["Requirement"] + VENDORS,
+                    value=compliance_rows(GATES, VENDORS, ELIGIBILITY_COMPLIANCE),
+                    interactive=False,
+                    wrap=True,
+                    row_count=(len(GATES), "fixed"),
+                    column_count=(1 + len(VENDORS), "fixed"),
+                    label="Requirement compliance (sample data)",
+                )
+
+                gr.Markdown("#### Record eligibility outcome")
+                with gr.Row():
+                    eligibility_vendor_dd = gr.Dropdown(VENDORS, label="Vendor")
+                    eligibility_outcome_radio = gr.Radio(
+                        ELIGIBILITY_OUTCOMES, label="Outcome"
+                    )
+                eligibility_reason_tb = gr.Textbox(
+                    label="Reason (required when Excluded, optional otherwise)",
+                    lines=2,
+                )
+                eligibility_record_btn = gr.Button(
+                    "Record eligibility outcome", variant="primary"
+                )
+                eligibility_status_md = gr.Markdown("")
+
+                gr.Markdown("#### Current outcomes")
+                eligibility_state = gr.State(new_eligibility_state())
+                eligibility_outcomes_df = gr.Dataframe(
+                    headers=["Vendor", "Outcome", "Reason"],
+                    value=current_outcomes(new_eligibility_state(), VENDORS),
+                    interactive=False,
+                    wrap=True,
+                    row_count=(len(VENDORS), "fixed"),
+                    column_count=(3, "fixed"),
+                    label="Current eligibility outcomes",
+                )
+
+                eligibility_log_md = gr.Markdown(
+                    format_eligibility_log(new_eligibility_state())
+                )
+
+            with gr.TabItem("8. Validation"):
                 gr.Markdown("### Validation questions for testers")
                 gr.Markdown(VALIDATION_QUESTIONS_MD)
 
-            with gr.TabItem("7. Compare (preview)"):
+            with gr.TabItem("9. Compare (preview)"):
                 gr.Markdown("### Side-by-side vendor comparison")
                 gr.Markdown(
                     "_Preview with sample data: two mock proposals against the "
@@ -594,10 +763,20 @@ def build_app():
                 consensus_log_md = gr.Markdown(format_consensus_log([]))
 
         refresh_overview_btn.click(
-            lambda cap, via, setup_state: refresh_overview(
-                cap.values.tolist(), via.values.tolist(), setup_state
+            lambda cap, via, setup_state, prop_state, elig_state: refresh_overview(
+                cap.values.tolist(),
+                via.values.tolist(),
+                setup_state,
+                prop_state,
+                elig_state,
             ),
-            inputs=[capability_df, viability_df, setup_approval_state],
+            inputs=[
+                capability_df,
+                viability_df,
+                setup_approval_state,
+                proposals_state,
+                eligibility_state,
+            ],
             outputs=overview_df,
         )
 
@@ -678,6 +857,41 @@ def build_app():
             on_reopen_setup_framework,
             inputs=[setup_approval_state, setup_reopen_reason_tb],
             outputs=setup_lock_outputs,
+        )
+
+        proposals_lock_outputs = [
+            proposals_state,
+            proposals_status_md,
+            proposals_log_md,
+            proposals_confirm_btn,
+        ]
+
+        proposals_confirm_btn.click(
+            on_confirm_proposal_set,
+            inputs=[proposals_state, proposals_confirm_note_tb],
+            outputs=proposals_lock_outputs,
+        )
+
+        proposals_reopen_btn.click(
+            on_reopen_proposal_set,
+            inputs=[proposals_state, proposals_reopen_reason_tb],
+            outputs=proposals_lock_outputs,
+        )
+
+        eligibility_record_btn.click(
+            on_record_eligibility,
+            inputs=[
+                eligibility_state,
+                eligibility_vendor_dd,
+                eligibility_outcome_radio,
+                eligibility_reason_tb,
+            ],
+            outputs=[
+                eligibility_state,
+                eligibility_status_md,
+                eligibility_outcomes_df,
+                eligibility_log_md,
+            ],
         )
 
         domain_dd.change(

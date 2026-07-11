@@ -14,9 +14,11 @@ the team charter and take precedence over anything below.
 You own `app/data/` only:
 - `sample_data.py` — MVP-0 scenario (options, capability/viability rows and
   values, blank/completed sample grids)
-- `comparison_sample.py` — Compare-tab sample data (vendors, evaluators,
-  architecture domains, mandatory gates, criteria, extracted responses with
-  evidence/confidence/gaps, panel scores)
+- `comparison_sample.py` — Compare/Setup/Proposals/Eligibility sample data
+  (vendors, evaluators, evaluation team, architecture domains, mandatory
+  gates, criteria with weights, extracted responses with
+  evidence/confidence/gaps, panel scores, scoring scale/modes, shortlist
+  rule, proposal readiness register, eligibility compliance table)
 
 You do not touch `app/logic/`, `app/ui/`, or `app.py`. If a task needs
 changes there too, do your part and say clearly what still needs the logic

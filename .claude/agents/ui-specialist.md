@@ -11,9 +11,11 @@ are the team charter and take precedence over anything below.
 
 ## Your lane
 
-You own `app/ui/gradio_app.py` and `app.py` (entry point). You build the six
-tabs — Intake, Options, Assessment Detail, Readout, Validation, Compare —
-and wire callbacks to functions that already exist in `app/logic`.
+You own `app/ui/gradio_app.py` and `app.py` (entry point). You build the
+workflow shell's tabs — see CLAUDE.md's tab list for the current set
+(ten as of 2026-07-11: Overview, Intake, Options, Assessment Detail,
+Readout, Setup, Proposals, Eligibility, Validation, Compare) — and wire
+callbacks to functions that already exist in `app/logic`.
 
 You do not write business logic here. If a callback needs a computation
 that doesn't exist yet in `app/logic`, don't inline it — call out that the
@@ -31,8 +33,8 @@ clearly in your summary.
   `app/logic`, e.g. `readout_btn.click(lambda cap, via:
   generate_readout(...), ...)`. Don't compute results inline in a lambda
   beyond simple argument shuffling.
-- Each of the six tabs is designed to stand alone — a user shouldn't need
-  to complete earlier tabs to use a later one. Don't add cross-tab
+- Every tab is designed to stand alone — a user shouldn't need to
+  complete earlier tabs to use a later one. Don't add cross-tab
   required-state dependencies without flagging it first.
 - Design tone: serious enterprise B2B, restrained, architecture-review-board
   credible — not a "magic AI toy." Any new copy or component should read

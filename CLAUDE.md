@@ -33,6 +33,8 @@ python tests/test_readout.py
 python tests/test_comparison.py
 python tests/test_overview.py
 python tests/test_setup.py
+python tests/test_proposals.py
+python tests/test_eligibility.py
 
 # Deploy (after pushing to GitHub origin)
 git push hf main
@@ -75,8 +77,8 @@ hosting is in place (see `docs/backlog.md`).
 
 ## Architecture
 
-Python + Gradio only (not React/Vercel). Single `gr.Blocks` app with an
-eight-tab workflow shell; each tab is designed to stand alone (a user
+Python + Gradio only (not React/Vercel). Single `gr.Blocks` app with a
+ten-tab workflow shell; each tab is designed to stand alone (a user
 shouldn't have to complete earlier tabs to use a later one).
 
 ```
@@ -87,7 +89,8 @@ app/data/comparison_sample.py Compare/Setup sample data: vendors, evaluators, na
                                evaluation team, architecture domains, mandatory gates,
                                criteria (with weights), extracted responses
                                (evidence/confidence/gaps), panel scores, scoring scale,
-                               scoring modes, and shortlist rule
+                               scoring modes, shortlist rule, proposal readiness
+                               register, and vendor eligibility compliance table
 app/logic/overview.py         pure functions: intake log + grid values -> per-stage
                                workflow status (chip label + next recommended action)
 app/logic/readout.py          pure functions: grid values -> plain-English readout text
@@ -97,7 +100,12 @@ app/logic/persistence.py      appends intake records to a private HF Dataset rep
 app/logic/setup.py            pure functions: evaluation-framework approval lock
                                (approve/reopen with reasoned, logged events) + weight
                                sum validation
-app/ui/gradio_app.py          the actual UI: builds all eight tabs and wires callbacks
+app/logic/proposals.py        pure functions: proposal-set confirm/reopen state machine
+                               (reasoned, logged events) + readiness display rows
+app/logic/eligibility.py      pure functions: vendor eligibility outcomes — compliance
+                               display rows, record_eligibility (Excluded requires a
+                               reason), current outcomes, event log
+app/ui/gradio_app.py          the actual UI: builds all ten tabs and wires callbacks
 ```
 
 Data/logic/UI are cleanly separated: `app/data` holds static sample content,
@@ -108,7 +116,7 @@ handlers. When adding a feature, prefer keeping new business logic in
 `app/logic` and calling it from thin UI callbacks, matching the existing
 pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
 
-### The eight tabs
+### The ten tabs
 
 1. **Overview** — workflow status at a glance. One row per stage (Intake,
    Options, Assessment Detail, Readout, Setup, Proposals, Eligibility,
@@ -117,11 +125,12 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
    Complete) and a next-recommended-action line, computed by
    `stage_statuses()` in `app/logic/overview.py`. Statuses are honest and
    cheap: Intake from the persistence log, Assessment Detail / Readout from
-   the live grid values, Setup from the framework approval state; stages
-   that don't exist yet are hardcoded "Not started" — never fabricated from
-   sample data. A "Refresh status" button re-reads the intake log, current
-   grid values, and approval state. No scores, no percentages-complete, no
-   ranking.
+   the live grid values, Setup from the framework approval state, Proposals
+   from the confirm state, Eligibility from recorded outcomes (a user
+   action — never derived from the sample compliance table); stages that
+   don't exist yet are hardcoded "Not started" — never fabricated from
+   sample data. A "Refresh status" button re-reads all of these. No scores,
+   no percentages-complete, no ranking.
 2. **Intake** — sourcing request form. "Save intake / continue" builds a
    markdown summary and calls `append_intake_record` (persistence, see
    below). Has a collapsible saved-log viewer (`load_intake_log`) to confirm
@@ -150,8 +159,28 @@ pattern (e.g. `readout_btn.click(lambda cap, via: generate_readout(...), ...)`).
    with a non-empty reason, and every approve/reopen event is timestamped
    in a visible, never-cleared log. Approval state is session-only
    (`gr.State`) — deliberately not persisted.
-7. **Validation** — static standing questions for anyone testing the tool.
-8. **Compare (preview)** — the product's central experience, previewed
+7. **Proposals** — supplier/proposal readiness register over `VENDORS`
+   (`PROPOSAL_READINESS`: Invited / Loaded / Reviewed / Accepted into
+   evaluation, sample-data status only — the tool does no document upload,
+   parsing, or AI extraction and the copy must never imply it). Primary
+   action "Confirm proposal set" is a confirm/reopen state machine
+   (`app/logic/proposals.py`) mirroring the Setup approval lock: reopening
+   requires a non-empty reason, every event is timestamped in a visible,
+   never-cleared log, state is session-only.
+8. **Eligibility** — vendor-level mandatory-requirement gate, distinct from
+   Assessment Detail's Baseline Viability Gate (that one applies to
+   OPTIONS; this one applies to VENDORS). Read-only compliance table
+   (`ELIGIBILITY_COMPLIANCE`, requirement x vendor) plus a human outcome
+   recorder: each vendor gets exactly one current outcome (Eligible /
+   Conditionally eligible / Clarification required / Excluded) via
+   `record_eligibility()` — **Excluded refuses to save without a non-empty
+   reason** (same pattern as `record_consensus`). Re-recording replaces the
+   current outcome but the event log keeps full history; excluded vendors
+   stay visible with their reason, never removed. Outcomes are categorical,
+   sit outside scoring, and are never auto-derived from the compliance
+   table.
+9. **Validation** — static standing questions for anyone testing the tool.
+10. **Compare (preview)** — the product's central experience, previewed
    against two sample vendor proposals (`comparison_sample.py`):
    - Mandatory gates shown separately from scoring — a gate failure can
      never be offset by a good score elsewhere.

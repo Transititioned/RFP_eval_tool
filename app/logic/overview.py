@@ -40,8 +40,6 @@ STATUSES = (
 # sample vendors).
 _FIXED_NOT_STARTED_ACTIONS = {
     "Options": "Name candidate options in the Options tab once intake is saved.",
-    "Proposals": "Not available in this preview build.",
-    "Eligibility": "Not available in this preview build.",
     "Evaluation": "Not available in this preview build.",
     "Shortlist": "Not available in this preview build.",
     "Recommendation": "Not available in this preview build.",
@@ -177,11 +175,92 @@ def setup_status(setup_approval_state):
     )
 
 
+def proposals_status(proposals_state):
+    """Status/next_action for the Proposals stage.
+
+    Derived only from the confirm-proposal-set state
+    (app.logic.proposals), the same honest pattern as setup_status():
+    - None, or never confirmed with an empty event log -> "Not started".
+    - Has events but isn't currently confirmed (i.e. it was confirmed then
+      reopened) -> "Needs attention" — it needs re-confirmation.
+    - Currently confirmed -> "Complete".
+    """
+    if not proposals_state:
+        return (
+            "Not started",
+            "Load and confirm the vendor proposal set in the Proposals tab.",
+        )
+
+    events = proposals_state.get("events") or []
+    confirmed = bool(proposals_state.get("confirmed"))
+
+    if confirmed:
+        return (
+            "Complete",
+            "Proposal set confirmed. Reopen only with a logged reason if it must change.",
+        )
+    if events:
+        return (
+            "Needs attention",
+            "Proposal set was reopened after confirmation — review and re-confirm.",
+        )
+    return (
+        "Not started",
+        "Load and confirm the vendor proposal set in the Proposals tab.",
+    )
+
+
+def eligibility_status(eligibility_state, eligibility_vendors=None):
+    """Status/next_action for the Eligibility stage.
+
+    Derived only from recorded eligibility outcomes
+    (app.logic.eligibility) — a human action — never from sample
+    compliance data:
+    - No outcomes recorded -> "Not started".
+    - Any *current* outcome is "Clarification required" -> "Needs
+      attention", regardless of how many other vendors are assessed —
+      mirrors the "gates are never diluted" rule: a clarification flag
+      must surface even if everything else looks done.
+    - Some, but not (verifiably) all, vendors assessed -> "In progress".
+    - Every vendor in ``eligibility_vendors`` has a current outcome ->
+      "Complete". If ``eligibility_vendors`` isn't supplied, completeness
+      can't be verified, so the status stays "In progress" rather than
+      guessing "Complete".
+    """
+    outcomes = (eligibility_state or {}).get("outcomes") or {}
+    if not outcomes:
+        return (
+            "Not started",
+            "Record eligibility outcomes for each vendor in the Eligibility tab.",
+        )
+
+    if any(entry.get("outcome") == "Clarification required" for entry in outcomes.values()):
+        return (
+            "Needs attention",
+            "At least one vendor is marked 'Clarification required' — follow up "
+            "before proceeding.",
+        )
+
+    vendors = eligibility_vendors or []
+    if vendors and set(vendors) <= set(outcomes.keys()):
+        return (
+            "Complete",
+            "Every vendor has a recorded eligibility outcome.",
+        )
+    return (
+        "In progress",
+        "Continue recording eligibility outcomes for the remaining vendors.",
+    )
+
+
 def stage_statuses(
     intake_log_rows=None,
     capability_grid=None,
     viability_grid=None,
     setup_approval_state=None,
+    proposals_state=None,
+    eligibility_state=None,
+    eligibility_vendors=None,
 ):
     """Status for every workflow stage, in STAGES order.
 
@@ -197,6 +276,18 @@ def stage_statuses(
     app.logic.setup.new_approval_state() / approve_framework() /
     reopen_framework(); omitted or None behaves exactly as before this
     parameter existed (Setup hardcoded to "Not started").
+
+    ``proposals_state`` is the dict shape produced by
+    app.logic.proposals.new_proposal_state() / confirm_proposal_set() /
+    reopen_proposal_set(); omitted or None behaves exactly as before this
+    parameter existed (Proposals hardcoded to "Not started").
+
+    ``eligibility_state`` is the dict shape produced by
+    app.logic.eligibility.new_eligibility_state() / record_eligibility();
+    ``eligibility_vendors`` is the full vendor list to check completeness
+    against (e.g. app.data.comparison_sample.VENDORS). Both omitted or None
+    behaves exactly as before these parameters existed (Eligibility
+    hardcoded to "Not started").
     """
     intake_log_rows = intake_log_rows or []
     capability_grid = capability_grid or []
@@ -208,12 +299,18 @@ def stage_statuses(
     )
     readout_stat, readout_action = readout_status(capability_grid, viability_grid)
     setup_stat, setup_action = setup_status(setup_approval_state)
+    proposals_stat, proposals_action = proposals_status(proposals_state)
+    eligibility_stat, eligibility_action = eligibility_status(
+        eligibility_state, eligibility_vendors
+    )
 
     per_stage = {
         "Intake": (intake_stat, intake_action),
         "Assessment Detail": (assessment_stat, assessment_action),
         "Readout": (readout_stat, readout_action),
         "Setup": (setup_stat, setup_action),
+        "Proposals": (proposals_stat, proposals_action),
+        "Eligibility": (eligibility_stat, eligibility_action),
     }
 
     results = []

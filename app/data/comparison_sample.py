@@ -65,6 +65,64 @@ SHORTLIST_RULE = (
     "automatic output of the tool."
 )
 
+PROPOSAL_STATUSES = ["Invited", "Loaded", "Reviewed", "Accepted into evaluation"]
+
+# Per-vendor proposal readiness for the Proposals tab. Notes are register-style
+# entries (what the evaluation office has logged), not claims about document
+# upload or automated extraction.
+PROPOSAL_READINESS = {
+    "Acme CaseWorks": {
+        "status": "Accepted into evaluation",
+        "note": (
+            "Response logged in evaluation workbook; reviewed against every "
+            "mandatory gate and criterion; accepted into panel scoring."
+        ),
+    },
+    "NovaAI FlowSuite": {
+        "status": "Loaded",
+        "note": (
+            "Response logged in evaluation workbook; initial read flagged "
+            "several unanswered criteria for follow-up before full review."
+        ),
+    },
+    "Titan Public Sector Suite": {
+        "status": "Reviewed",
+        "note": (
+            "Response logged in evaluation workbook; review against "
+            "mandatory gates and criteria complete, pending panel sign-off."
+        ),
+    },
+}
+
+ELIGIBILITY_OUTCOMES = ["Eligible", "Conditionally eligible", "Clarification required", "Excluded"]
+
+# Requirement-level compliance vocabulary for the Eligibility tab. Distinct
+# from PASS/CLARIFY/FAIL/UNKNOWN used on GATES: this table records an
+# explicit compliance position per gate per vendor, never an absence.
+COMPLIANCE_VALUES = ["Met", "Met with conditions", "Not met", "Unclear"]
+
+# gate id -> vendor -> compliance position. Every existing GATES id x every
+# VENDORS name is covered (no missing cells). Kept in the same spirit as the
+# GATES status data above: Acme and Titan pass every gate cleanly; NovaAI's
+# Clarify positions read as "Unclear" and its GATE-02 Fail reads as "Not met".
+ELIGIBILITY_COMPLIANCE = {
+    "GATE-01": {
+        "Acme CaseWorks": "Met",
+        "NovaAI FlowSuite": "Unclear",
+        "Titan Public Sector Suite": "Met",
+    },
+    "GATE-02": {
+        "Acme CaseWorks": "Met",
+        "NovaAI FlowSuite": "Not met",
+        "Titan Public Sector Suite": "Met",
+    },
+    "GATE-03": {
+        "Acme CaseWorks": "Met",
+        "NovaAI FlowSuite": "Unclear",
+        "Titan Public Sector Suite": "Met",
+    },
+}
+
 ARCHITECTURE_DOMAINS = [
     "Application architecture",
     "API and integration architecture",
