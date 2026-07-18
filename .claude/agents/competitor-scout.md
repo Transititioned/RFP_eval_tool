@@ -1,6 +1,6 @@
 ---
 name: competitor-scout
-description: Research-mission investigator for the competitor-landscape workstream — which products serve buyer-side RFP evaluation and what features they offer across evaluate/score/award stages. Use only when delegated a workstream by the /research-rfp Research Lead; not for product code changes.
+description: Evidence-grade competitor investigator for buyer-side RFP evaluation features. Use only from /research-rfp-evidence, not the default product-MVP route or product code changes.
 tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 model: sonnet
 ---

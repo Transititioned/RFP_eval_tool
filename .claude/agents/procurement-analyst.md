@@ -1,6 +1,6 @@
 ---
 name: procurement-analyst
-description: Research-mission investigator for the procurement-workflow workstream — how real evaluation panels and procurement governance run the evaluation stage, and where tools help or hinder. Use only when delegated a workstream by the /research-rfp Research Lead; not for product code changes.
+description: Optional evidence-grade procurement/work-practice specialist. Use only when a mission explicitly needs governance depth; not in the default product-MVP scan or for product code changes.
 tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 model: sonnet
 ---

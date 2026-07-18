@@ -7,8 +7,10 @@ reconstructs its task from this file plus the mission directory.
 ## Phase
 
 Not started
-<!-- Not started | Plan | Investigate | Merge | Verify |
-     Synthesise (draft) | Contrarian review | Finalise | Done -->
+<!-- Common/product-mvp: Not started | Plan | Investigate | Combine | Map |
+     Select | Challenge | Finalise | Done
+     Evidence-grade also supports: Merge | Verify | Synthesise (draft) |
+     Contrarian review -->
 
 ## Phases completed
 

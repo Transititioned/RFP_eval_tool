@@ -1,6 +1,6 @@
 ---
 name: contrarian-researcher
-description: Research-mission contrarian — challenges the draft decision brief's framing, evidence use, and conclusions before it is finalised. Use only when invoked by the /research-rfp Research Lead in the Contrarian-review phase, after a draft brief exists.
+description: Evidence-grade contrarian for formal draft-brief review. Use from /research-rfp-evidence; product-MVP uses the Lead's capped five-question challenge instead.
 tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 model: sonnet
 ---

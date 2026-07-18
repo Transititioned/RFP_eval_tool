@@ -1,6 +1,6 @@
 ---
 name: ux-pattern-analyst
-description: Research-mission investigator for the UX-patterns workstream — recurring interface patterns in evaluation/scoring tools (scoring input, comparison, progress, divergence, moderation) and which respect human-decides. Use only when delegated a workstream by the /research-rfp Research Lead; not for product code changes.
+description: Evidence-grade UX-pattern investigator using formal claim and ledger contracts. Use only from /research-rfp-evidence, not the default product-MVP route or product code changes.
 tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 model: sonnet
 ---

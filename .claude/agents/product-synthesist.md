@@ -1,6 +1,6 @@
 ---
 name: product-synthesist
-description: Research-mission strategist/synthesiser — turns verified findings into the mission's decision brief, and finalises it after contrarian review. Use only when invoked by the /research-rfp Research Lead in the Synthesise and Finalise phases.
+description: Evidence-grade synthesist for verified findings and formal contrarian review. Use from /research-rfp-evidence; product-MVP uses mvp-synthesist.
 tools: Read, Grep, Glob, Write, Edit
 model: sonnet
 ---

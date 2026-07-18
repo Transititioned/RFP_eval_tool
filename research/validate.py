@@ -40,6 +40,11 @@ AGENTS_DIR = ROOT / ".claude" / "agents"
 COMMANDS_DIR = ROOT / ".claude" / "commands"
 
 RESEARCH_AGENTS = [
+    "category-capability-scout",
+    "workflow-ux-scout",
+    "distinctive-feature-scout",
+    "product-fit-mapper",
+    "mvp-synthesist",
     "competitor-scout",
     "procurement-analyst",
     "ux-pattern-analyst",
@@ -47,6 +52,14 @@ RESEARCH_AGENTS = [
     "contrarian-researcher",
     "product-synthesist",
 ]
+
+PRODUCT_MVP_AGENTS = {
+    "category-capability-scout",
+    "workflow-ux-scout",
+    "distinctive-feature-scout",
+    "product-fit-mapper",
+    "mvp-synthesist",
+}
 
 # Exact claim-tag grammar from research/core/evidence-contract.md
 RE_EVIDENCE = re.compile(r"\[Evidence: S\d+(?:, S\d+)*\]")
@@ -159,6 +172,7 @@ required_files = [
     RESEARCH / "missions" / "_template" / "state.md",
     RESEARCH / "missions" / "_template" / "ledger.md",
     RESEARCH / "missions" / "_template" / "findings" / "_workstream-template.md",
+    RESEARCH / "missions" / "_template" / "findings" / "_product-mvp-workstream-template.md",
 ]
 for f in required_files:
     check(f.is_file(), "missing required file: %s" % f.relative_to(ROOT))
@@ -257,10 +271,55 @@ for name in RESEARCH_AGENTS:
     for key in ("description:", "tools:", "model:"):
         check(key in front, "agent %s: frontmatter missing '%s'" % (name, key))
     check(
-        "research/core/research-core.md" in text
-        and "research/core/evidence-contract.md" in text,
-        "agent %s: must direct reading of the core contracts" % name,
+        "research/core/research-core.md" in text,
+        "agent %s: must direct reading of the research core" % name,
     )
+    if name in PRODUCT_MVP_AGENTS:
+        check(
+            "research/profiles/product-mvp.md" in text,
+            "agent %s: must direct reading of product-mvp profile" % name,
+        )
+    else:
+        check(
+            "research/core/evidence-contract.md" in text,
+            "agent %s: must direct reading of evidence contract" % name,
+        )
+
+for name in (
+    "category-capability-scout",
+    "workflow-ux-scout",
+    "distinctive-feature-scout",
+):
+    scout = read(AGENTS_DIR / (name + ".md"))
+    check(
+        re.search(r"at most \*\*5 (?:commercial )?products\*\*", scout) is not None,
+        "agent %s: missing hard five-product ceiling" % name,
+    )
+    check(
+        "5 useful sources" in scout,
+        "agent %s: missing hard five-source ceiling" % name,
+    )
+
+fit_mapper = read(AGENTS_DIR / "product-fit-mapper.md")
+for classification in (
+    "already strong", "present but weak", "missing",
+    "deliberately excluded", "poor fit",
+):
+    check(
+        classification in fit_mapper,
+        "product-fit-mapper: missing classification '%s'" % classification,
+    )
+
+mvp_synth = read(AGENTS_DIR / "mvp-synthesist.md")
+for limit in (
+    "maximum 5 category/backend capabilities",
+    "maximum 5 workflow/UX patterns",
+    "maximum 3 distinctive ideas",
+    "3–5 changes",
+    "one reserve MVP",
+    "three things not to build",
+):
+    check(limit in mvp_synth, "mvp-synthesist: missing output limit '%s'" % limit)
 
 cmd_path = COMMANDS_DIR / "research-rfp.md"
 check(cmd_path.is_file(), "missing command: .claude/commands/research-rfp.md")
@@ -272,14 +331,45 @@ if cmd_path.is_file():
         ("parallel delegation", "parallel"),
         ("explicit delegation mechanism", "Agent tool"),
         ("absolute-path passing", "absolute path"),
-        ("source ledger", "ledger.md"),
-        ("verification", "evidence-verifier"),
-        ("contrarian review", "contrarian-researcher"),
-        ("synthesis", "product-synthesist"),
+        ("five-product ceiling", "5 products"),
+        ("five-source ceiling", "5 useful sources"),
+        ("category scout", "category-capability-scout"),
+        ("UX scout", "workflow-ux-scout"),
+        ("distinctive scout", "distinctive-feature-scout"),
+        ("fit mapping", "product-fit-mapper"),
+        ("MVP synthesis", "mvp-synthesist"),
+        ("conditional verification", "evidence-verifier"),
+        ("proportional challenge", "at most five"),
         ("restartable state", "state.md"),
         ("decision brief", "brief.md"),
     ]:
         check(needle in cmd, "command: missing %s ('%s')" % (duty, needle))
+    check(
+        "research-rfp-evidence.md" in cmd,
+        "command: must route evidence-grade/history to research-rfp-evidence",
+    )
+
+evidence_cmd_path = COMMANDS_DIR / "research-rfp-evidence.md"
+check(evidence_cmd_path.is_file(), "missing command: .claude/commands/research-rfp-evidence.md")
+if evidence_cmd_path.is_file():
+    evidence_cmd = read(evidence_cmd_path)
+    for duty, needle in [
+        ("source ledger", "ledger.md"),
+        ("verification", "evidence-verifier"),
+        ("contrarian review", "contrarian-researcher"),
+        ("synthesis", "product-synthesist"),
+    ]:
+        check(needle in evidence_cmd, "evidence command: missing %s ('%s')" % (duty, needle))
+
+product_template = read(
+    RESEARCH / "missions" / "_template" / "findings"
+    / "_product-mvp-workstream-template.md"
+)
+for field in (
+    "Products inspected", "Sources used", "Capability or pattern",
+    "Observation", "Source", "Signal", "Limitation", "Follow-on gaps",
+):
+    check(field in product_template, "product-MVP findings template: missing '%s'" % field)
 
 # --- 5/6. Missions ----------------------------------------------------------
 missions_dir = RESEARCH / "missions"
@@ -289,8 +379,9 @@ missions = sorted(
 check(len(missions) >= 1, "no missions instantiated under research/missions/")
 
 VALID_PHASES = [
-    "Not started", "Plan", "Investigate", "Merge", "Verify",
-    "Synthesise (draft)", "Contrarian review", "Finalise", "Done",
+    "Not started", "Plan", "Investigate", "Combine", "Map", "Select",
+    "Challenge", "Merge", "Verify", "Synthesise (draft)",
+    "Contrarian review", "Finalise", "Done",
 ]
 VALID_STATUSES = ["Planned", "In progress", "Complete", "Abandoned"]
 

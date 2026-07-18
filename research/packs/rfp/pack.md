@@ -64,10 +64,10 @@ screenshots are the raw material.
 
 ## Source-quality guidance for this domain
 
-Default evidence budget: aim for 8–12 useful sources per workstream and stop
-when additional searching repeats established findings. Exceed that range
-only when a material contradiction or coverage gap requires it, and record
-why. Quality and decision relevance beat source count.
+The selected research profile owns the budget. For the default product-MVP
+profile, each scout may inspect no more than 5 products and use no more than 5
+useful sources, stopping earlier at saturation. Evidence-grade missions state
+their own approved budget. No agent silently expands either profile.
 
 - **Vendor sites/docs** — primary for "the product has feature X";
   commentary for "feature X works well". Marketing pages overstate;

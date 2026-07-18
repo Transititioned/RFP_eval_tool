@@ -35,8 +35,9 @@ retain these blocks for simple provenance but do not require claim tagging.
 
 | ID | Role (agent) | Question | Findings file | Source-ID block |
 |---|---|---|---|---|
-| WS1 | <agent-name> | <the question this workstream answers> | `findings/ws1-<slug>.md` | S101–S199 |
-| WS2 | <agent-name> | <question> | `findings/ws2-<slug>.md` | S201–S299 |
+| WS1 | category-capability-scout | Which established backend, logic and workflow capabilities across the bounded commercial-product scan are most relevant to the next MVP? | `findings/ws1-category-capabilities.md` | S101–S199 |
+| WS2 | workflow-ux-scout | Which guided-workflow and UX patterns across the bounded commercial-product scan solve important user problems for the next MVP? | `findings/ws2-workflow-ux.md` | S201–S299 |
+| WS3 | distinctive-feature-scout | Which uncommon but valuable features from RFP/evaluation or permitted adjacent products could differentiate the next MVP without exceeding one-person scope? | `findings/ws3-distinctive-features.md` | S301–S399 |
 
 ## Constraints
 
