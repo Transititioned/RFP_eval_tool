@@ -151,6 +151,8 @@ required_files = [
     RESEARCH / "core" / "research-core.md",
     RESEARCH / "core" / "evidence-contract.md",
     RESEARCH / "core" / "source-ledger.md",
+    RESEARCH / "profiles" / "product-mvp.md",
+    RESEARCH / "profiles" / "evidence-grade.md",
     RESEARCH / "packs" / "rfp" / "pack.md",
     RESEARCH / "context" / "project-context.md",
     RESEARCH / "missions" / "_template" / "mission.md",
@@ -164,6 +166,32 @@ for f in required_files:
 if failures:
     print("\n%d check(s) failed before content checks could run." % len(failures))
     sys.exit(1)
+
+# --- 1a. Research profiles and new-mission contract ------------------------
+product_profile = read(RESEARCH / "profiles" / "product-mvp.md")
+for label, needle in [
+    ("five-product ceiling", "5 commercial products per scout"),
+    ("five-source ceiling", "5 useful sources per scout"),
+    ("category shortlist", "Category/backend capability shortlist — maximum 5"),
+    ("UX shortlist", "Workflow/UX shortlist — maximum 5"),
+    ("distinctive shortlist", "Distinctive-feature shortlist — maximum 3"),
+    ("next-MVP bundle", "3–5 changes"),
+    ("reserve MVP", "one reserve MVP"),
+    ("proportional challenge", "at most five questions"),
+]:
+    check(needle in product_profile, "product-mvp profile: missing %s" % label)
+
+evidence_profile = read(RESEARCH / "profiles" / "evidence-grade.md")
+for term in ("evidence verifier", "contrarian review", "verification.md"):
+    check(term in evidence_profile, "evidence-grade profile: missing '%s'" % term)
+
+mission_template = read(RESEARCH / "missions" / "_template" / "mission.md")
+for section in ("## Research profile", "## Current MVP baseline"):
+    check(section in mission_template, "mission template: missing '%s'" % section)
+check(
+    re.search(r"## Research profile\s*\n+product-mvp", mission_template) is not None,
+    "mission template: product-mvp must be the default profile",
+)
 
 # --- 2. Evidence contract ---------------------------------------------------
 contract = read(RESEARCH / "core" / "evidence-contract.md")
@@ -282,6 +310,14 @@ for mission in missions:
         "## Workstreams", "## Constraints", "## Deliverable", "## Status",
     ]:
         check(section in charter, "%s: mission.md missing '%s'" % (mname, section))
+
+    profile_m = re.search(r"## Research profile\s*\n+([^\n<]+)", charter)
+    if profile_m is not None:
+        check(
+            profile_m.group(1).strip() in ("product-mvp", "evidence-grade"),
+            "%s: unsupported Research profile '%s'"
+            % (mname, profile_m.group(1).strip()),
+        )
 
     status_m = re.search(r"## Status\s*\n+([^\n<]+)", charter)
     check(

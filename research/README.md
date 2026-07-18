@@ -1,17 +1,18 @@
 # Research team
 
 An in-repo, project-scoped research capability for the Capability Sourcing
-Workbench. It runs structured research missions using Claude Code subagents
-and produces evidence-classified decision briefs. It never modifies the
-product — research output is input to human product decisions.
+Workbench. Its default job is evidence-informed incremental MVP selection,
+not exhaustive market reporting. It never modifies the product — research
+output is input to human product decisions.
 
-## The three layers
+## The four layers
 
 | Layer | Location | Contents | Reusable? |
 |---|---|---|---|
 | **Research Core** | `research/core/` | Domain-neutral contracts: mission lifecycle, orchestration and restart rules, the evidence classification contract, the source-ledger schema | Yes — nothing in here mentions RFPs or this product |
 | **RFP Product Research Pack** | `research/packs/rfp/` | Domain knowledge for researching the RFP/procurement product space: research questions, seed product list, source-quality guidance | Yes, for any RFP-domain research |
 | **Local context** | `research/context/` | What *this* application actually is: shipped capabilities, decisions, constraints a brief must respect | No — specific to this repo |
+| **Research profile** | `research/profiles/` | Proportional method and output contract: `product-mvp` default or optional `evidence-grade` | Yes |
 
 Missions live in `research/missions/<slug>/` and combine all three layers.
 `research/missions/_template/` is the blank mission scaffold.
@@ -23,18 +24,20 @@ Missions live in `research/missions/<slug>/` and combine all three layers.
 /research-rfp 2026-07-rfp-workflow-ux   # runs/resumes a specific mission
 ```
 
-The command is the Research Lead: it plans, delegates parallel
-investigations to the scout/analyst subagents, merges sources into the
-mission ledger, sends material claims to the evidence verifier, runs a
-contrarian review over the draft brief, and has the synthesist produce
-the final decision brief. Every phase boundary is checkpointed in the
-mission's `state.md`, so an interrupted mission resumes where it stopped.
+Every new mission declares a profile. `product-mvp` is the default and must
+converge to a 5/5/3 shortlist plus one coherent 3–5-change next MVP.
+`evidence-grade` preserves the formal ledger, verifier and contrarian process
+for decisions that justify it. Every phase boundary is checkpointed in
+`state.md`, so an interrupted mission resumes where it stopped.
 
-The default run is deliberately cost-conscious: Sonnet specialists, an
-8–12 useful-source budget per investigative workstream, saturation-based
-stopping, and checkpoint-driven finalisation rather than a second full
-read of the evidence corpus. A mission may exceed the source budget when a
-recorded contradiction or coverage gap genuinely requires it.
+The product-MVP ceiling is five products and five useful sources per scout,
+with earlier stopping at pattern saturation. An agent cannot expand that
+scope; it records a gap for a later approved mission. Formal verification is
+conditional and limited to a consequential finalist claim.
+
+Pass 1 establishes these contracts. The existing `/research-rfp` command and
+agent roles are rewired to the new default in Pass 2; the completed July
+mission remains valid evidence-grade history.
 
 ## Roles (see `.claude/agents/`)
 
