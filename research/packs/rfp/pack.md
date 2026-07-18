@@ -30,8 +30,9 @@ expected and fine; this material must never be copied into app sample
 data (see `research/README.md`, Boundaries).
 
 - Buyer-side / eSourcing: SAP Ariba Sourcing, Coupa Sourcing, JAGGAER,
-  Ivalua, Zip, Vendorful, Prokuria, Euna (Bonfire) — Bonfire's
-  evaluator scoring UX is specifically worth study.
+  Ivalua, Zip, Vendorful, Prokuria, Euna (Bonfire). No seed product is
+  privileged: a mechanic found in only one product must be reported as a
+  single-product example, never a recurring pattern.
 - Vendor-side (UX patterns): Responsive (formerly RFPIO), Loopio,
   Qvidian/Upland, QorusDocs.
 - Public-sector: e-tendering portals and published government evaluation
@@ -63,6 +64,11 @@ screenshots are the raw material.
 
 ## Source-quality guidance for this domain
 
+Default evidence budget: aim for 8–12 useful sources per workstream and stop
+when additional searching repeats established findings. Exceed that range
+only when a material contradiction or coverage gap requires it, and record
+why. Quality and decision relevance beat source count.
+
 - **Vendor sites/docs** — primary for "the product has feature X";
   commentary for "feature X works well". Marketing pages overstate;
   product documentation and release notes understate — prefer docs.
@@ -84,6 +90,9 @@ screenshots are the raw material.
   prefer current product docs over review-site feature matrices.
 - "Industry standard" claims are almost always Inference or Hypothesis,
   not Evidence — one vendor doing something is not a standard.
+- "Recurring" requires the same specific mechanic in at least two
+  independent buyer-side products. Otherwise label the named product and
+  treat applicability as a product-native inference or hypothesis.
 - Distinguish *workflow* claims (what panels must do) from *feature*
   claims (what tools offer) from *UX* claims (how tools present it);
   keep them in their own workstream's findings.

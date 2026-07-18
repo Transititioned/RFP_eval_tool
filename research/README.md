@@ -30,6 +30,12 @@ contrarian review over the draft brief, and has the synthesist produce
 the final decision brief. Every phase boundary is checkpointed in the
 mission's `state.md`, so an interrupted mission resumes where it stopped.
 
+The default run is deliberately cost-conscious: Sonnet specialists, an
+8–12 useful-source budget per investigative workstream, saturation-based
+stopping, and checkpoint-driven finalisation rather than a second full
+read of the evidence corpus. A mission may exceed the source budget when a
+recorded contradiction or coverage gap genuinely requires it.
+
 ## Roles (see `.claude/agents/`)
 
 - **Research Lead / orchestrator** — the `/research-rfp` command itself,

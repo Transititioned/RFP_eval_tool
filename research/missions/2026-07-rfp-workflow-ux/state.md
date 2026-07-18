@@ -6,7 +6,7 @@ reconstructs its task from this file plus the mission directory.
 
 ## Phase
 
-Finalise
+Done
 <!-- Not started | Plan | Investigate | Merge | Verify |
      Synthesise (draft) | Contrarian review | Finalise | Done -->
 
@@ -27,21 +27,17 @@ Finalise
 - Contrarian review (2026-07-18) — contrarian-review.md written: 10
   challenges C1–C10, ranked; no new sources proposed; file
   contract-compliant.
+- Finalise (2026-07-18) — all ten challenges answered. The final pass
+  narrowed market claims, reframed public-sector governance as a
+  best-practice analogue, retained R1 on product-native grounds, made R2
+  dual-mode, moved R3/R5/R7 behind validation gates, made R4 conditional,
+  and corrected §4.4's auto-gate conflict. brief.md set to final.
 
 ## Next action
 
-**Mission paused before Finalise** (2026-07-18): the session hit its
-monthly spend limit after the contrarian review completed, so the
-synthesist finalisation was not run. brief.md is deliberately still
-`Status: draft` and its "Objections and responses" section is a
-placeholder — per the mission contract the brief cannot go final until
-every challenge C1–C10 in contrarian-review.md is answered (accepted
-with a change, or rebutted with reasons). To resume: run
-`/research-rfp 2026-07-rfp-workflow-ux`; the Lead should invoke
-product-synthesist to answer all ten challenges (C8 flags a fit failure
-in brief §4.4 that likely requires a body change, C1–C3 are the
-highest-impact), verify none went unanswered, set brief Status: final,
-set mission Status: Complete, and run `python research/validate.py`.
+**Mission complete** (2026-07-18): read `brief.md` for the final decision
+brief. No product changes were made. Recommendations remain inputs to the
+repo owner's build decision, not an approved implementation plan.
 
 ## Log
 
@@ -60,3 +56,4 @@ set mission Status: Complete, and run `python research/validate.py`.
 2026-07-18 — Contrarian review phase: contrarian-researcher invoked.
 2026-07-18 — Contrarian review delivered: 10 challenges (top: C1 Bonfire-seeded selection bias behind R1/R3/R5; C2 R3 friction unsupported by governance sources; C3 search-snippet re-verification overstates independence of Verified tags for 403-blocked sources). One literal-tag mention fixed by the contrarian; validate.py ALL CHECKS PASSED (736). Contrarian review closed.
 2026-07-18 — Mission paused before Finalise: monthly spend limit reached; brief remains Status: draft with Objections and responses unanswered. Resume via /research-rfp.
+2026-07-18 — Finalise resumed in Codex from the recorded checkpoint: C1–C10 answered and body revised; mission set Complete. validate.py passed 736/736 and all eight application test suites passed.

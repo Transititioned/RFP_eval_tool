@@ -108,3 +108,15 @@ line each), claim-classification and verification counts, open
 hypotheses, and contrarian challenges that changed the brief. The brief
 informs the user's decision — present it as input, never as a done deal,
 and do not start implementing anything it recommends.
+
+## Cost discipline
+
+- Follow the pack's default source budget and stop at evidence saturation;
+  do not reward agents for source volume.
+- Resume from `state.md`; never repeat a completed phase merely to rebuild
+  context.
+- Finalisation is a targeted revision of the checkpointed draft, not a
+  second full synthesis. The synthesist opens underlying findings only for
+  challenges that require them.
+- If a specialist exhausts its useful task, accept its file and end the
+  agent; do not launch follow-up agents for cosmetic prose changes.

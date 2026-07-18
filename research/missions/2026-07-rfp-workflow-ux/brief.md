@@ -1,6 +1,6 @@
 # Decision brief: RFP-workflow-and-UX makeover for the Capability Sourcing Workbench
 
-Status: draft
+Status: final
 
 Mission: `2026-07-rfp-workflow-ux`
 Audience: the repo owner, deciding which workflow/UX improvements to build
@@ -21,13 +21,17 @@ load-bearing product principle is flagged "requires a product decision"
 rather than presented as settled. All product data stays synthetic; no
 real vendor material named in the research flows into `app/data/`.
 
-The headline finding that shapes everything below: the market's dominant
-*direction of travel* — computed "award recommendations", agentic
-"making an award", optimization scenarios that name a winner — runs
-directly against this product's core principle that the tool never
-declares a winner on its own. That makes the workbench's restraint a
-deliberate market departure, and makes "What not to adopt" (§4) a
-first-class part of this brief rather than an afterthought.
+The headline finding that shapes everything below is narrower than the
+vendors' language initially suggests. Several large platforms market
+computed award recommendations, optimisation scenarios, or agentic
+"making an award", but the research did not establish that shipped
+products routinely record an award without a human approval action
+[Inference: from S108, S109, S111, S312, S313, S315, S317]
+[Verified: 2026-07-18]. The workbench is therefore resisting an
+automation-oriented *market framing*, not demonstrably departing from a
+shipped market norm. Its structural separation between ranking and human
+decision remains worth protecting, which makes "What not to adopt" (§4)
+a first-class part of this brief without overstating its uniqueness.
 
 ---
 
@@ -38,7 +42,14 @@ Findings that survived verification, each with its classification tag and
 Hypothesis during verification are shown as tentative in §5, never as
 fact here.
 
-### The workbench's spine already matches governance practice
+### The workbench's spine aligns with defensible public-procurement practice
+
+The governance evidence in this mission comes primarily from US and UK
+public procurement. It is not a binding statement of what every private
+enterprise buyer must do. It is best read as a deliberately demanding
+best-practice analogue for an enterprise decision-support tool, especially
+where auditability and challenge-resistance matter
+[Inference: from S202, S203, S206, S207, S208, S213, S319].
 
 - Real evaluation runs a fixed two-step sequence: each evaluator scores
   independently first, then the panel meets to reconcile — and averaging
@@ -79,10 +90,11 @@ fact here.
   reason-required design on consensus, shortlist divergence, and
   recommendation [Inference: from S203, S202] [Verified: 2026-07-18].
 
-The practical implication: the workbench's most distinctive constraints
-are not idiosyncrasies to soften — they are the parts most aligned with
-how defensible evaluation actually works. The makeover should reinforce
-them, not trade them away for market-common convenience.
+The practical implication is conditional rather than universal: the
+workbench's constraints align well with a high-assurance model of
+defensible evaluation. They should be preserved because they fit the
+product's chosen decision-support posture, not because this research has
+proved that all enterprise buyers are legally required to use them.
 
 ### The market's evaluate/score/award feature set
 
@@ -111,7 +123,17 @@ them, not trade them away for market-common convenience.
   than a differentiator [Inference: from S104, S107, S110, S111, S112]
   [Verified: 2026-07-18].
 
-### Recurring UX patterns
+### Observed UX patterns (evidence coverage varies)
+
+Three mechanics below — divergence highlighting, per-score reason capture,
+and detailed evaluator progress — were observed primarily in Bonfire after
+the research pack explicitly nominated Bonfire for study. They are not
+established as recurring market norms. In addition, several Bonfire and SAP
+support pages could not be fetched directly; their mechanics were
+re-derived through search results rather than independently read. Treat
+those details as provisional pending a manual product-page or demo check
+[Hypothesis]. Validate by: manually opening or capturing the relevant
+Bonfire and SAP help pages, or confirming the mechanics in a product demo.
 
 - **Structured reason at the point of scoring.** Bonfire requires each
   evaluator to pick a predefined "Reason" (the reason set changes by
@@ -206,13 +228,17 @@ badge, or cell emphasis at the existing `>= 2` threshold), and make the
 Moderate focus queue reachable directly from a flagged criterion —
 mirroring the market's highlight-then-drill-in adjacency.
 
-**Support.** Bonfire's 30%-spread highlighting without altering
-underlying scores [Evidence: S302, S305] [Verified: 2026-07-18]; the
-moderation screen one click from the highlighted summary
-[Evidence: S303]; the governance rationale that outliers should be
-discussed and calibrated, not averaged away [Evidence: S202]
-[Verified: 2026-07-18] [Evidence: S317]. This reinforces load-bearing
-principle 2 (honest visibility) rather than conflicting with it.
+**Support.** The recommendation stands primarily on the product's own
+honest-visibility principle and on making an already-computed signal useful.
+Bonfire provides a provisional analogue for 30%-spread highlighting and
+highlight-to-moderation adjacency [Evidence: S302, S303, S305], while public
+procurement guidance supports discussing rather than averaging away
+outliers [Evidence: S202] [Verified: 2026-07-18]. Bonfire is a single-vendor
+example, not proof of a market norm, and its exact mechanics require the
+manual confirmation described in §2 [Hypothesis]. Validate by: confirm
+S302/S303/S305 directly and test the proposed treatment with evaluators;
+the recommendation still survives if Bonfire's precise presentation does
+not.
 
 **Cost.** Small logic reuse (the signal exists); UI work to render it and
 wire navigation.
@@ -226,68 +252,60 @@ list is a lower-risk fallback that needs no per-cell styling
 `gr.Dataframe` styling against `gradio==6.19.0`, falling back to a flag
 column if per-cell colour is not cleanly supported.
 
-### R2 — Make question/criterion-anchored traversal the labelled default in Compare (Evaluation > Compare)
+### R2 — Offer explicit question- and vendor-anchored traversal in Compare (Evaluation > Compare)
 
 **Change.** The Compare grid is already criterion-filterable by
-architecture domain. Make criterion-anchored reading the explicit,
-labelled default (score one criterion across all vendors before moving
-on), with the vendor-anchored view available as the alternate. This is a
-framing/labelling and default-ordering change, not a new component.
+architecture domain. Label and offer both reading modes: question-anchored
+(one criterion across all vendors) and vendor-anchored (one proposal's
+coherence across criteria). Do not declare either the default until a small
+usability check shows which better supports the product's capability-first
+workflow. This is a framing and ordering change, not a new component.
 
-**Support.** Vendorful's question-centric recommendation to improve
-scoring accuracy [Evidence: S310] [Verified: 2026-07-18]; the
-question-anchored vs vendor-anchored naming [Inference: from S310]
-[Verified: 2026-07-18].
+**Support.** Vendorful advocates question-centric comparison
+[Evidence: S310] [Verified: 2026-07-18], but that is vendor-authored
+guidance rather than independent usability evidence. The product's own
+capability-first stance supplies the counter-case for preserving a
+vendor-anchored view [Inference: from S310] [Verified: 2026-07-18].
 
 **Cost.** Low — mostly copy and default state; the grid exists.
 
 **Gradio feasibility.** Achievable in Gradio (filter/sort of an existing
 dataframe, matching the existing `.change()` pattern).
 
-### R3 — Add structured reason capture at individual scoring (Evaluation > Evaluate)
+### R3 — Do not add mandatory individual-score reasons yet (moved to validation)
 
-**Change.** Bring a lightweight structured-justification field to the
-Evaluate sub-view so an individual score can carry a short categorical
-reason and/or comment, aligning individual scoring with the rationale
-discipline the product already enforces at consensus. Note this changes
-Evaluate from its current read-only sample display into an input surface.
+**Change.** Retain rationale at consensus, shortlist divergence, and
+recommendation. Do not yet convert Evaluate into an input surface or require
+a reason for every individual score. Test whether an optional comment solves
+a real evaluator or audit problem before changing the product shape.
 
-**Support.** Bonfire's predefined-reason-per-score-band-plus-comment
-pattern [Evidence: S304] [Verified: 2026-07-18]; the observation that
-this is a more front-loaded version of the product's consensus-only
-rationale [Inference: from S304]; the governance principle that written
-per-score reasoning is the artefact that survives protest
-[Evidence: S203] [Verified: 2026-07-18] [Inference: from S203, S202]
-[Verified: 2026-07-18]; anchored small scales with example answers
-[Evidence: S318].
+**Support.** Bonfire appears to capture a predefined reason plus comment at
+individual scoring [Evidence: S304], but no governance source in this
+mission requires written justification at that stage. S203 supports a
+contemporaneous decision record, which the current consensus and downstream
+reason fields already provide [Evidence: S203] [Verified: 2026-07-18].
 
-**Cost.** Moderate — adds fields and (if made persistent) touches
-session-state design. Keep it a captured reason, never a *gate* that
-blocks saving an individual score, to avoid friction that governance does
-not require at the individual stage.
+**Cost.** Avoided for now. A future version would add interaction friction,
+make the read-only Evaluate sample an input surface, and gain little audit
+value unless the reasons persist.
 
-**Gradio feasibility.** Straightforward (`gr.Textbox`/`gr.Dropdown` per
-row); no platform stretch.
+**Validation gate.** [Hypothesis] Optional score comments may still help
+moderation without becoming a mandatory governance artefact. Validate by:
+observe two evaluation workshops or interview panel members about when a
+pre-consensus note prevents rework; require evidence of value and a
+persistence decision before building.
 
-**Flag.** Making Evaluate an input surface (vs read-only sample) is a
-product-shape decision, and any persistence of per-score reasons would
-extend state beyond the current session-only/intake-log boundary —
-**requires a product decision** on both counts.
+### R4 — Validate and optionally enrich Setup's existing calibration anchors (Setup)
 
-### R4 — Turn Setup's scoring-scale anchors into an explicit calibration artefact (Setup)
+**Change.** First test whether panels already understand the scoring-scale
+anchors as their calibration reference. If not, add one worked example per
+score level and clearer calibration copy. Treat this as optional polish, not
+a proven governance gap.
 
-**Change.** Enrich the existing scoring-scale anchors table with a worked
-example reference answer per score level, and frame it explicitly as the
-panel's calibration reference (what a given level "means") — so the
-calibration step governance expects has a home in the tool rather than
-being implicit.
-
-**Support.** Anchored 0-3 scale with example answers per level
-[Evidence: S318]; "skipping calibration" named among recurring scoring
-errors [Evidence: S209] [Verified: 2026-07-18]. WS2 flags whether the
-anchors table is already serving as the calibration artefact as an open
-question, so treat the framing as the settled part and a distinct
-calibration *step* as tentative (see §5).
+**Support.** A practitioner guide uses anchored scales with example answers
+[Evidence: S318], and vendor commentary warns against skipping calibration
+[Evidence: S209] [Verified: 2026-07-18]. Neither establishes that this
+product's existing anchors are inadequate.
 
 **Cost.** Low — an extra column/field in an existing Setup table plus
 copy; no new workflow stage required for the minimal version.
@@ -295,25 +313,20 @@ copy; no new workflow stage required for the minimal version.
 **Gradio feasibility.** Achievable (editable dataframe already exists in
 Setup).
 
-### R5 — Add a per-evaluator completion breakdown to the Evaluation Landing telemetry (Evaluation > Landing)
+### R5 — Keep aggregate completion telemetry; test demand for named breakdowns
 
-**Change.** The Landing already shows completion %, evaluators complete,
-criteria complete. Add a per-evaluator completion breakdown (who has
-finished, who is outstanding), matching the market's per-evaluator
-progress view, while keeping everything keyed to process completion,
-never to a score.
+**Change.** Keep the current aggregate completion %, evaluators-complete and
+criteria-complete telemetry. Do not add a named who-is-outstanding view
+until users show that coordination value outweighs the surveillance tone.
 
-**Support.** Bonfire's per-evaluator progress bar and percent-complete
-figure keyed to process not score [Evidence: S305] [Verified: 2026-07-18]
-[Inference: from S305]. Directly consistent with load-bearing principle 2.
+**Support.** The only specific product example is a Bonfire-distributed
+source that could not be directly read [Evidence: S305]. That is too weak
+to displace a current surface which already reports aggregate progress.
 
-**Cost.** Low-to-moderate — telemetry breakdown over existing scoring
-slots; a refresh-on-action pattern (which the product already uses) is
-sufficient, so no live cross-session infrastructure is needed.
-
-**Gradio feasibility.** Achievable with the existing "Refresh status"
-refresh-on-action approach; live multi-user updates are *not* required
-for this and should be avoided (see §5).
+**Validation gate.** [Hypothesis] A named breakdown may help an evaluation
+chair chase incomplete scoring. Validate by: ask panel chairs whether the
+aggregate view leaves a recurring coordination problem, and confirm the
+Bonfire mechanic from a directly readable source or demo before building.
 
 ### R6 — Model evaluator conflict-of-interest attestation and pre-consensus score confidentiality (Setup / Evaluation) — requires a product decision
 
@@ -322,11 +335,12 @@ Setup's evaluation-team list) and a "scores hidden until submitted"
 confidentiality mechanic so individual scoring is not contaminated by
 seeing others' scores first.
 
-**Support.** Governance treats signed COI declarations and pre-consensus
-rating confidentiality as standard evaluator-role requirements
-[Evidence: S206] [Verified: 2026-07-18]. SAP Ariba's blind grading is the
+**Support.** Public-procurement guidance treats signed COI declarations and
+pre-consensus rating confidentiality as evaluator-role requirements
+[Evidence: S206] [Verified: 2026-07-18]. SAP Ariba's blind grading is a
 market analogue on the confidentiality side [Evidence: S105]
-[Verified: 2026-07-18].
+[Verified: 2026-07-18]. For general enterprise buyers this is an
+assurance-oriented option, not a proven universal requirement.
 
 **Cost.** Moderate-to-high — introduces new per-evaluator state and
 masking logic; the confidentiality mechanic in particular implies
@@ -338,24 +352,20 @@ session-state design and adds a new surface; and masked/hidden scoring
 adds state the product does not currently keep. Present as a candidate to
 weigh, not an approved build.
 
-### R7 — Allow a minority/dissent record at the Moderate consensus step (Evaluation > Moderate) — requires a product decision
+### R7 — Do not extend the consensus model for minority opinions yet
 
-**Change.** Let the Moderate step optionally record a documented
-minority/dissenting position alongside the agreed consensus score, for
-the case where a panel cannot fully agree, rather than assuming a single
-agreed score is always reachable.
+**Change.** Keep the existing Recommendation-level dissenting-views field.
+Do not extend `record_consensus()` until evidence shows mid-scale enterprise
+panels need a distinct minority position at criterion level often enough to
+justify the model change.
 
-**Support.** Federal guidance does not force false agreement: the record
-may document "both majority conclusions and minority opinions with
-supporting rationale" [Evidence: S202] [Verified: 2026-07-18]. (Note the
-Recommendation tab already carries a free-text dissenting-views field;
-this extends the same idea upstream to the consensus step.)
+**Support.** US Army guidance permits majority and minority opinions
+[Evidence: S202] [Verified: 2026-07-18], but that evidence comes from large
+federal acquisition and does not establish frequency or fit for this
+product's intended enterprise use.
 
-**Cost.** Moderate — extends `record_consensus()`'s data shape and UI.
-
-**Flag.** **Requires a product decision** — it changes the consensus data
-model, and how often the minority path is actually invoked in practice is
-unverified (see §5), so build only if that frequency check supports it.
+**Cost.** Avoided for now; a future version would require a product decision
+because it extends the consensus data shape and UI.
 
 ---
 
@@ -368,25 +378,24 @@ should keep rejecting.
 ### 4.1 Computed auto-award / "recommended supplier" as the terminus
 
 Do not adopt a system-computed award recommendation presented as the
-answer — the JAGGAER Intelligent Award Navigator preference-learning
+human decision — the JAGGAER Intelligent Award Navigator preference-learning
 converge-on-a-recommendation model [Evidence: S109, S110]
 [Verified: 2026-07-18], Ivalua's Sourcing Decision Center "data-driven
 recommendations" for the selection decision [Evidence: S111]
 [Verified: 2026-07-18], and SAP Ariba's optimization award scenarios plus
 ML supplier recommendations [Evidence: S108] [Verified: 2026-07-18].
-These market a computed "optimal"/"recommended" winner as the headline
-value [Inference: from S108, S109, S111] [Verified: 2026-07-18], and none
-treats withholding the computed answer as a principle
-[Inference: from S108, S109, S110, S111] [Verified: 2026-07-18]. This is
-the exact pattern the workbench's "never auto-declares a winner"
-principle and the four-distinct-fields Recommendation design exist to
-resist — adopting it would break load-bearing principle 1.
+These market a computed "optimal"/"recommended" outcome as headline value
+[Inference: from S108, S109, S111] [Verified: 2026-07-18]. The evidence
+does not show that these products then record an award without human
+approval. The workbench should resist collapsing calculation and decision,
+while avoiding a claim that every competitor has crossed that line.
 
 ### 4.2 Agentic "making an award" / ranking-to-award as one pipeline
 
-Do not adopt the agentic framing where the tool goes from scoring through
-to "making an award" with human review recast as optional supervision
-[Evidence: S316] [Verified: 2026-07-18]. The problem is the *framing* that
+Do not adopt the agentic marketing framing where the tool goes from scoring
+through to "making an award" [Evidence: S316] [Verified: 2026-07-18]. The
+research did not establish the shipped approval mechanics behind that copy;
+the problem for this product is the *framing* that
 ranking-to-award is a single automatable pipeline rather than two
 categorically different acts [Inference: from S315, S316]
 [Verified: 2026-07-18]. Any future AI work here is additionally bounded by
@@ -411,13 +420,14 @@ destructive.
 
 The market auto-scores objective question types (Bonfire's True/False,
 Yes/No, Number responses [Evidence: S103]; Prokuria's choice-question
-auto-scoring [Evidence: S312, S313]). Auto-scoring narrow *objective*
-gate/quantitative fields is defensible, but extending it to qualitative
-capability judgement — or any AI-generated scoring/summarisation — is a
-hard scope limit in CLAUDE.md and only conceivable later under the
-staged-AI, synthetic-only, private-hosting rules. Any move here
-**requires a product decision**; do not import the market's
-"automated scoring" framing wholesale.
+auto-scoring [Evidence: S312, S313]). Do not import that mechanic by
+default, even for apparently objective gates: this product deliberately
+requires humans to record gate and eligibility outcomes rather than deriving
+them automatically from a compliance table. Any auto-derivation would
+conflict with that principle and **requires a product decision**. Extending
+automation to qualitative capability judgement or AI-generated scoring is
+also a hard scope limit; the staged-AI direction allows evidence read-in and
+cross-checks under its preconditions, never AI input to scores or decisions.
 
 ### 4.5 A relative (percentage) divergence threshold copied without its own rationale
 
@@ -482,6 +492,15 @@ fact.
   Validate by: establishing whether real evaluation events invoke the
   minority/non-consensus path often enough to model, versus its being a
   rare escape valve.
+- **Individual-score comments may help moderation, but their value and
+  persistence are unresolved** (formerly R3) [Hypothesis]. Validate by:
+  observe two evaluation workshops or interview panel members about when a
+  pre-consensus note prevents rework, then decide whether such notes must
+  persist before turning Evaluate into an input surface.
+- **Named evaluator progress may solve a chair's coordination problem, or
+  merely add surveillance** (formerly R5) [Hypothesis]. Validate by: ask
+  evaluation chairs whether aggregate telemetry leaves a recurring problem
+  and confirm the Bonfire mechanic from a directly readable source or demo.
 - **Downgraded practitioner claims — treat as sentiment, not fact.** The
   claims that structured tools help mainly with *mechanical* consistency
   and record-keeping (not process discipline), and that a "halo
@@ -509,10 +528,81 @@ fact.
 
 ## 6. Objections and responses
 
-*Placeholder — completed after contrarian review.* Every challenge raised
-in `contrarian-review.md` will be recorded here and answered (accepted,
-with what changed; or rebutted, with evidence-grounded reasons) before the
-brief is set to `Status: final`.
+All ten challenges materially informed the final pass. None is treated as
+silence or as an instruction to manufacture counter-evidence.
+
+### C1 — Bonfire-seeded selection bias: accepted
+
+The body no longer calls the Bonfire mechanics recurring market patterns.
+§2 now identifies the pack's Bonfire seed, single-vendor coverage, and the
+need for manual confirmation. R1 survives because it exposes the product's
+own existing spread signal and advances honest visibility; the exact Bonfire
+presentation is only a provisional analogue. R3 and R5 are no longer build
+recommendations.
+
+### C2 — Individual-score reasons add unsupported friction: accepted
+
+R3 now recommends doing nothing until user evidence supports an optional
+comment. The brief no longer claims that governance mandates a reason for
+every individual score. It recognises that the defensible record is already
+captured at consensus and downstream decision points, and that persistence
+would be necessary before individual reasons could carry the claimed audit
+benefit.
+
+### C3 — Search re-derivation is weaker than independent verification: accepted
+
+§2 now explicitly caveats the Bonfire and SAP mechanics that were re-derived
+from search results after direct pages were blocked. R1, R3 and R5 were
+narrowed accordingly. The ledger's historic verdicts remain intact as an
+audit trail; the final brief no longer treats those verdicts as equivalent
+to an independent manual read.
+
+### C4 — Public-sector law was over-generalised to enterprise: accepted
+
+§2 now frames the US/UK governance corpus as a demanding best-practice
+analogue, not a binding requirement for private enterprise. R6 is presented
+as an assurance-oriented product decision. R7 was moved to validation rather
+than retained as an enterprise recommendation.
+
+### C5 — Question-anchored default rested on vendor marketing: accepted
+
+R2 now offers both question- and vendor-anchored traversal and requires a
+small usability check before choosing a default. This preserves the
+capability-first case for reading a whole proposal while still testing the
+comparison efficiency claimed by Vendorful.
+
+### C6 — Auto-award direction overstated shipped behaviour: accepted
+
+§1 and §4 now distinguish automation-oriented marketing language from
+confirmed shipped behaviour. The research supports protecting the boundary
+between computed ranking and human decision; it does not support claiming
+that unattended award is the dominant shipped norm or that the workbench is
+unique in retaining human choice.
+
+### C7 — Per-evaluator progress is weak and potentially managerial: accepted
+
+R5 now preserves aggregate telemetry. A named breakdown is an open
+hypothesis gated on a real coordination problem and direct confirmation of
+the reference mechanic.
+
+### C8 — Objective auto-scoring contradicted the human gate rule: accepted
+
+§4.4 now rejects automatic gate derivation by default. Even apparently
+objective auto-scoring would require an explicit product decision because
+Eligibility and viability outcomes are deliberately human-recorded.
+
+### C9 — Calibration enrichment may duplicate the existing anchors: accepted
+
+R4 is now optional polish. The first action is to test whether the existing
+anchors already function as the panel's calibration artefact; enrichment is
+conditional on a demonstrated comprehension gap.
+
+### C10 — Minority opinions were imported from very large federal procurement: accepted
+
+R7 now recommends no consensus-model change. Criterion-level minority
+positions remain a hypothesis until mid-scale enterprise evidence shows
+they occur often enough to justify new state and UI; the existing
+Recommendation dissent field remains the current outlet.
 
 ---
 
@@ -520,19 +610,14 @@ brief is set to `Status: final`.
 
 Validation actions, not build commitments:
 
-1. Run the Gradio feasibility spikes in §5 (conditional `gr.Dataframe`
-   styling for R1; show/hide toggle; confirm no live cross-session need
-   for R5) before treating R1's cell-colour variant as low-risk.
-2. Sequence the low-risk, high-alignment items first: R2
-   (question-anchored default) and R4 (calibration anchors) are cheap and
-   reinforce existing principles; R1 and R5 follow pending the spike.
-3. Hold R3, R6, R7 for an explicit product decision — each changes
-   product shape or state model (R3 makes Evaluate an input surface; R6
-   adds COI/masking state; R7 changes the consensus data model).
-4. Resolve the two decision-relevant open questions before building their
-   dependents: the award-justification differentiator check (informs how
-   to position Recommendation) and the minority-opinion frequency check
-   (gates R7).
-5. Keep §4 as a standing "will not build" list: revisit only if the repo
-   owner deliberately chooses to reopen a hard scope limit, and never as a
-   drift toward the market's auto-award default.
+1. Run a small Gradio spike for R1's spread marker. Prefer a flag column or
+   flagged-criteria list if conditional dataframe styling is awkward.
+2. Usability-test R2's two traversal modes before selecting a default.
+3. Check whether Setup's existing anchors already calibrate users; enrich
+   them only if R4's comprehension gap is observed.
+4. Hold R3, R5 and R7 as validation questions, not backlog commitments.
+   Treat R6 as the only larger candidate requiring a deliberate product and
+   state-model decision.
+5. Resolve the award-justification differentiator hypothesis before using
+   it in positioning, and retain §4 as a standing boundary against collapsing
+   computed analysis into human gate, shortlist, recommendation or award.
